@@ -19,13 +19,14 @@ def parse_wordle_score(message: str) -> Optional[Tuple[int, int]]:
         Score is 1-6 for successful guesses, 7 for failed (X/6)
     """
     # Pattern to match Wordle results
-    # Matches: "Wordle 123 4/6" or "Wordle 123 X/6"
-    pattern = r'Wordle\s+(\d+)\s+([X1-6])/6'
+    # Matches: "Wordle 123 4/6" or "Wordle 1,234 4/6" or "Wordle 123 X/6"
+    pattern = r'Wordle\s+([\d,]+)\s+([X1-6])/6'
     
     match = re.search(pattern, message, re.IGNORECASE)
     
     if match:
-        wordle_number = int(match.group(1))
+        # Remove commas from the number
+        wordle_number = int(match.group(1).replace(',', ''))
         score_str = match.group(2)
         
         if score_str.upper() == 'X':
