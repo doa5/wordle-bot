@@ -1,0 +1,5 @@
+{
+  "token": "YOUR_DISCORD_BOT_TOKEN_HERE",
+  "command_prefix": "!",
+  "wordle_bot_id": null
+}
