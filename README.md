@@ -68,12 +68,55 @@ The bot will automatically:
 - Store it in the database
 - React with ✅ to confirm recording
 
+If you try to submit the same Wordle number twice, the bot will react with ⚠️ to indicate a duplicate.
+
 ### Commands
 
 - `!leaderboard` or `!lb` - Display the weekly leaderboard
 - `!leaderboard all` - Display the all-time leaderboard
 - `!stats` - Show your personal Wordle statistics
 - `!help_wordle` - Display help information
+
+### Example Usage
+
+**Viewing the Weekly Leaderboard:**
+```
+!leaderboard
+```
+
+Response:
+```
+📊 Weekly Wordle Leaderboard
+
+🥇 1. Bob
+   Avg: 3.00 | Games: 5
+
+🥈 2. Alice
+   Avg: 3.50 | Games: 5
+
+🥉 3. Charlie
+   Avg: 4.20 | Games: 4
+```
+
+**Checking Your Stats:**
+```
+!stats
+```
+
+Response:
+```
+📈 Wordle Stats for Alice
+Average Score: 3.50
+Total Games: 12
+```
+
+### Supported Formats
+
+The bot recognizes Wordle messages in these formats:
+- `Wordle 123 4/6` - Standard format
+- `Wordle 1,234 4/6` - With comma separator
+- `Wordle 123 X/6` - Failed attempt (counts as score of 7)
+- Case-insensitive (`wordle`, `WORDLE`, `Wordle` all work)
 
 ## How It Works
 
@@ -110,6 +153,33 @@ The bot requires the following Discord permissions:
 - Send Messages
 - Add Reactions
 - Embed Links
+
+## Development
+
+### Running Tests
+
+To run the test suite:
+
+```bash
+python tests/run_tests.py
+```
+
+Or run individual tests:
+
+```bash
+python tests/test_parser.py
+python tests/test_database.py
+```
+
+### Demo
+
+To see a demonstration of the bot's functionality without connecting to Discord:
+
+```bash
+python demo.py
+```
+
+This will show how the bot processes Wordle messages, stores scores, and generates leaderboards.
 
 ## Contributing
 
