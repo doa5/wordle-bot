@@ -68,7 +68,7 @@ class RoleCog(commands.Cog):
         
         # Optional notification
         if notify_channel and removed_count > 0:
-            await notify_channel.send(f"Good morning, everyone. A new day brings fresh challenges. I've reset the roles for {removed_count} members. Good luck with today's puzzle.")
+            await notify_channel.send(f"Good morning, everyone. I've reset the roles for {removed_count} members. Good luck with today's puzzle.")
         
         return removed_count
 
