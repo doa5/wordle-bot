@@ -1,9 +1,7 @@
 import discord
 from discord.ext import commands, tasks
-import asyncio
 import logging
-from datetime import datetime, timedelta, time
-
+from datetime import time
 
 class RoleCog(commands.Cog):
     """
@@ -13,13 +11,13 @@ class RoleCog(commands.Cog):
     which users have completed their daily Wordle puzzle so they can
     avoid spoilers. 
     """
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         """Initialize the RoleCog with bot instance and role configuration."""
         self.bot = bot
         self.role_name = "done"
 
     @commands.command()
-    async def done(self, ctx) -> None:
+    async def done(self, ctx: commands.Context) -> None:
         """
         Assign the 'done' role to indicate Wordle completion.
         
@@ -73,7 +71,8 @@ class RoleCog(commands.Cog):
         return removed_count
 
     @commands.command()
-    async def reset(self, ctx) -> None:
+    @commands.is_owner()
+    async def reset(self, ctx: commands.Context) -> None:
         """
         Remove the 'done' role from all server members.
      
@@ -111,11 +110,12 @@ class RoleCog(commands.Cog):
         logging.info(f"Daily reset completed! Removed roles from {total_removed} users.")
 
     @commands.command()
+    @commands.is_owner()
     async def test_daily_reset(self, ctx) -> None:
         """Test the midnight reset functionality."""
         await self.daily_reset_task()  
 
-async def setup(bot) -> None:
+async def setup(bot: commands.Bot) -> None:
     """Setup function to add the RoleCog to the bot."""
     await bot.add_cog(RoleCog(bot))
     logging.info("RoleCog has been added to the bot.")

@@ -1,8 +1,6 @@
 import discord
-from discord.ext import commands, tasks
-import asyncio
+from discord.ext import commands
 import logging
-from datetime import datetime, timedelta, time
 import re
 import os
 
@@ -13,7 +11,7 @@ class WordleParser(commands.Cog):
     This cog listens for messages from the official Wordle bot, extracts user scores,
     and saves them to a SQLite database for leaderboard tracking.
     """
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         """Initialize the WordleParser with bot instance."""
         self.bot = bot
         # Get bot ID from environment, default to 0 if not found
@@ -29,7 +27,7 @@ class WordleParser(commands.Cog):
                 self.wordle_bot_id = 0
 
     @commands.Cog.listener()
-    async def on_message(self, message) -> None:
+    async def on_message(self, message: discord.Message) -> None:
         """
         Listen for messages from the Wordle bot and parse scores.
         
@@ -46,8 +44,8 @@ class WordleParser(commands.Cog):
             # Testing purpose: simulate Wordle bot messages
             logging.info("Simulated Wordle report detected.")
             await self.parse_wordle_results(message)
-        
-    async def parse_wordle_results(self, message) -> None:
+
+    async def parse_wordle_results(self, message: discord.Message) -> None:
         """
         Parse Wordle bot results and extract scores
         
@@ -100,6 +98,6 @@ class WordleParser(commands.Cog):
         else:
             await message.channel.send("I couldn't find any scores to record this time. Perhaps everyone is still working on their puzzles.")
 
-async def setup(bot) -> None:
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(WordleParser(bot))
     logging.info("WordleParserCog has been added to bot.")

@@ -20,6 +20,12 @@ build/
 # Logs
 *.log
 
+# Testing
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
 # VS Code
 .vscode/
 
