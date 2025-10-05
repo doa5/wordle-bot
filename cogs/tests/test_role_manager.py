@@ -152,7 +152,7 @@ async def test_remove_done_roles_with_notification(role_cog, mocker):
     # Assert
     assert result == 1
     channel.send.assert_awaited_once_with(
-        "Good morning, everyone. I've reset the roles for 1 members. Good luck with today's puzzle."
+        "Good morning, everyone. I've reset the roles for 1 member. Good luck with today's puzzle."
     )
 
 
