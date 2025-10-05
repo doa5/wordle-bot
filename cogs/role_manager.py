@@ -69,9 +69,10 @@ class RoleCog(commands.Cog):
                     logging.error(f"Error removing role from {member.name}: {e}")
         
         # Optional notification
-        if notify_channel and removed_count > 0:
+        if notify_channel and removed_count == 1:
+            await notify_channel.send(f"Good morning, everyone. I've reset the roles for {removed_count} member. Good luck with today's puzzle.")
+        elif notify_channel and removed_count > 1:
             await notify_channel.send(f"Good morning, everyone. I've reset the roles for {removed_count} members. Good luck with today's puzzle.")
-        
         return removed_count
 
     @commands.command(aliases=["reset"])
