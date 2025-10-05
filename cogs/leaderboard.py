@@ -151,8 +151,7 @@ class LeaderboardCog(commands.Cog):
             
         # Use DatabaseCog for non-blocking delete
         query = 'DELETE FROM wordle_scores'
-        results = database_cog.execute_query(query, ())
-        deleted_rows = len(results) if results else 0
+        deleted_rows = database_cog.execute_non_select(query, ())
 
         await ctx.send(f"Archives cleared. {deleted_rows} entries processed.")
         logging.info(f"Leaderboard reset for guild {ctx.guild.id}, {deleted_rows} entries deleted.")
