@@ -3,6 +3,7 @@ from discord.ext import commands
 import logging
 import re
 import os
+from datetime import datetime
 
 class WordleParser(commands.Cog):
     """
@@ -73,20 +74,31 @@ class WordleParser(commands.Cog):
                     # Extract mentioned users (@ mentions)
                     user_mentions = re.findall(r'<@!?(\d+)>', line)
                     
-                    # Save each user's score to database
                     for user_id in user_mentions:
                         try:
-                            # Convert user ID to integer
                             member_id = int(user_id)
-                            
-                            # Get the user object
+                    
                             user = message.guild.get_member(member_id)
                             username = user.display_name if user else f"Unknown_{user_id}"
                             
-                            # TODO: Add actual database saving function here
-                            # save_wordle_score(user_id, username, score, str(message.guild.id))
-                            logging.info(f"Would save: {username} ({user_id}) = {score} points")
-                            total_saved += 1
+                            # Get database cog and save score
+                            database_cog = self.bot.get_cog('DatabaseCog')
+                            if database_cog:
+                                today = datetime.now().strftime('%Y-%m-%d')
+                            
+                                if database_cog.has_duplicate_submission(user_id, today):
+                                    logging.info(f"Duplicate submission ignored: {username} already recorded for {today}")
+                                    await message.add_reaction("❌")
+                                    continue
+                                
+                                success = database_cog.save_wordle_score(user_id, username, score, today)
+                                if success:
+                                    logging.info(f"Saved: {username} ({user_id}) = {score} points")
+                                    total_saved += 1
+                                else:
+                                    logging.error(f"Failed to save score for {username}")
+                            else:
+                                logging.error("DatabaseCog not found!")
                             
                         except ValueError:
                             logging.warning(f"Invalid user ID format: {user_id}")
@@ -95,9 +107,11 @@ class WordleParser(commands.Cog):
         
         if total_saved > 0:
             await message.channel.send(f"I've recorded the results for {total_saved} participants. Better not have cheated.")
+            await message.add_reaction("✅")
         else:
-            await message.channel.send("I couldn't find any scores to record this time. Perhaps everyone is still working on their puzzles.")
+            await message.channel.send("I found nothing worth recording. Either the report is broken, or you've all collectively failed me.")
 
 async def setup(bot: commands.Bot) -> None:
+    """Setup the WordleParser cog."""
     await bot.add_cog(WordleParser(bot))
     logging.info("WordleParserCog has been added to bot.")

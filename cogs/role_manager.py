@@ -16,8 +16,8 @@ class RoleCog(commands.Cog):
         self.bot = bot
         self.role_name = "done"
 
-    @commands.command()
-    async def done(self, ctx: commands.Context) -> None:
+    @commands.command(aliases=["done"])
+    async def give_done_role(self, ctx: commands.Context) -> None:
         """
         Assign the 'done' role to indicate Wordle completion.
         
@@ -32,10 +32,13 @@ class RoleCog(commands.Cog):
         role = discord.utils.get(ctx.guild.roles, name=self.role_name)
         if role:
             await ctx.author.add_roles(role)
-            await ctx.send(f"{ctx.author.mention}, so you're done? Well done on completing today's puzzle.")
+            await ctx.message.add_reaction("🏇")
+            await ctx.send(f"{ctx.author.mention}, well done. Access granted.")
             logging.info(f"Assigned 'done' role to {ctx.author}")
+            
         else:
             await ctx.send(f"I'm afraid I can't find the '{self.role_name}' role. Perhaps it needs to be created first?")
+            await ctx.message.add_reaction("❌")
             logging.warning(f"Role '{self.role_name}' not found in guild {ctx.guild.name}")
 
     async def _remove_done_roles(self, guild: discord.Guild, notify_channel: discord.TextChannel = None) -> int:
@@ -61,6 +64,7 @@ class RoleCog(commands.Cog):
                     await member.remove_roles(role)
                     removed_count += 1
                     logging.info(f"Removed 'done' role from {member.name}")
+                    
                 except Exception as e:
                     logging.error(f"Error removing role from {member.name}: {e}")
         
@@ -70,9 +74,9 @@ class RoleCog(commands.Cog):
         
         return removed_count
 
-    @commands.command()
+    @commands.command(aliases=["reset"])
     @commands.is_owner()
-    async def reset(self, ctx: commands.Context) -> None:
+    async def reset_done_roles(self, ctx: commands.Context) -> None:
         """
         Remove the 'done' role from all server members.
      
@@ -88,6 +92,9 @@ class RoleCog(commands.Cog):
         removed = await self._remove_done_roles(ctx.guild, ctx.channel)
         if removed == 0:
             await ctx.send(f"There's nothing to reset at the moment. Everyone must still be working on their puzzles.")
+            await ctx.message.add_reaction("❌")
+        else:
+            await ctx.message.add_reaction("✅")
 
     @tasks.loop(time=time(0, 0))
     async def daily_reset_task(self) -> None:

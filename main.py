@@ -4,7 +4,6 @@ import logging
 from dotenv import load_dotenv
 import os
 import asyncio
-import sqlite3
 
 def setup_logging() -> None:
     """Configure logging for the application."""
@@ -14,27 +13,6 @@ def setup_logging() -> None:
     )
     logging.info("Logging system initialized")
 
-def init_database() -> None:
-    """Initialize SQLite database for Wordle scores."""
-    conn = sqlite3.connect('wordle_scores.db')
-    cursor = conn.cursor()
-    
-    # Create table if it doesn't exist
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS wordle_scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            username TEXT,
-            score INTEGER NOT NULL,
-            date TEXT NOT NULL,
-            guild_id TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    logging.info("Database initialized!")
 
 def create_bot() -> commands.Bot:
     """Create and configure the Discord bot instance."""
@@ -52,7 +30,7 @@ async def load_cogs(bot: commands.Bot) -> None:
         "cogs.role_manager",
         "cogs.wordle_parser",
         "cogs.leaderboard",
-        # Add other cogs here as you create them
+        "utils.database",
         # "cogs.utility",
     ]
     
@@ -72,13 +50,14 @@ async def main() -> None:
     if not token:
         logging.error("DISCORD_TOKEN not found in environment variables!")
         return
-    
-    init_database()
 
     bot = create_bot()
     await load_cogs(bot)
-    logging.info("Woguri is awake!")
-    await bot.start(token)
+    try:
+        await bot.start(token)
+        logging.info("Woguri is awake!")
+    except Exception as e:
+        logging.error(f"Error starting bot: {e}")
 
 if __name__ == "__main__":
     try:
