@@ -98,14 +98,23 @@ class DatabaseCog(commands.Cog):
         Returns:
             True if the score was saved successfully, False otherwise.
         """
-        
+        if not self.connection:
+            logging.error("No database connection.")
+            return False
         query = """INSERT OR REPLACE INTO wordle_scores 
                    (user_id, username, score, date) 
                    VALUES (?, ?, ?, ?)"""
         params = (user_id, username, score, date)
         logging.info(f"Saving score for user {username} ({user_id}): {score} on {date}")
-        result = self.execute_query(query, params)
-        return len(result) == 0
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(query, params)
+            self.connection.commit()
+            logging.info("Score saved successfully.")
+            return True
+        except sqlite3.Error as e:
+            logging.error(f"Error saving score: {e}")
+            return False
     
     def has_duplicate_submission(self, user_id: int, date: str) -> bool:
         """Check if a user has already submitted a score for a specific date.
