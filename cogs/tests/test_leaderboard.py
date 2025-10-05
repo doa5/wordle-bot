@@ -142,7 +142,7 @@ async def test_reset_leaderboard_no_database(cog):
 async def test_reset_leaderboard_with_results(cog):
     """Test reset_leaderboard when there are entries to clear."""
     database_cog = mock.Mock()
-    database_cog.execute_query.return_value = [1, 2, 3]
+    database_cog.execute_query.return_value = [(3,)]  # COUNT(*) returns [(count,)]
     cog.bot.get_cog = mock.Mock(return_value=database_cog)
     ctx = mock.AsyncMock()
     ctx.guild.id = 123
@@ -150,6 +150,19 @@ async def test_reset_leaderboard_with_results(cog):
     ctx.send.assert_called_once()
     msg = ctx.send.call_args[0][0]
     assert "Archives cleared. 3 entries processed." in msg
+
+@pytest.mark.asyncio
+async def test_reset_leaderboard_empty_database(cog):
+    """Test reset_leaderboard when there are no entries to clear."""
+    database_cog = mock.Mock()
+    database_cog.execute_query.return_value = [(0,)]  # COUNT(*) returns [(0,)] for empty
+    cog.bot.get_cog = mock.Mock(return_value=database_cog)
+    ctx = mock.AsyncMock()
+    ctx.guild.id = 123
+    await cog.reset_leaderboard.callback(cog, ctx)
+    ctx.send.assert_called_once()
+    msg = ctx.send.call_args[0][0]
+    assert "Archives cleared. 0 entries processed." in msg
 
 @pytest.mark.asyncio
 async def test_show_leaderboard(cog):
