@@ -200,13 +200,13 @@ class LeaderboardCog(commands.Cog):
             await ctx.send("Database unavailable.")
             return
             
-        count_query = 'SELECT * FROM wordle_scores WHERE guild_id = ?'
-        existing_entries = database_cog.execute_query(count_query, (ctx.guild.id,))
+        count_query = 'SELECT COUNT(*) FROM wordle_scores WHERE guild_id = ?'
+        count_result = database_cog.execute_query(count_query, (ctx.guild.id,))
         
         delete_query = 'DELETE FROM wordle_scores WHERE guild_id = ?'
         database_cog.execute_query(delete_query, (ctx.guild.id,))
         
-        deleted_count = len(existing_entries)
+        deleted_count = count_result[0][0] if count_result and count_result[0] else 0
         await ctx.send(f"Archives cleared. {deleted_count} entries processed.")
         logging.info(f"Leaderboard reset for guild {ctx.guild.id}, {deleted_count} entries deleted.")
 

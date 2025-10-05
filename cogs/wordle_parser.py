@@ -12,6 +12,21 @@ class WordleParser(commands.Cog):
     This cog listens for messages from the official Wordle bot, extracts user scores,
     and saves them to a SQLite database for leaderboard tracking.
     """
+    
+    # Regex patterns for Wordle score parsing
+    WORDLE_SCORE_PATTERN = r'\d+/6:|X/6:'
+    SCORE_MATCH_PATTERN = r'^(\d|X)/6:?$'
+    USER_MENTION_PATTERN = r'^<@!?(\d+)>$'
+    PARSE_SCORE_PATTERN = r'(\d|X)/6:'
+    PARSE_USER_PATTERN = r'<@!?(\d+)>'
+    
+    # Message detection patterns
+    STREAK_TEXT = "day streak"
+    RESULTS_TEXT = "Here are yesterday's results:"
+    
+    # Valid Wordle score values (1-6 attempts, 8 for failed/X)
+    VALID_SCORES = [1, 2, 3, 4, 5, 6, 8]
+    
     def __init__(self, bot: commands.Bot) -> None:
         """Initialize the WordleParser with bot instance."""
         self.bot = bot
@@ -62,10 +77,10 @@ class WordleParser(commands.Cog):
             logging.info(f"Skipping automatic processing for message {message.id} - being handled manually")
             return
 
-        if message.author.id == self.wordle_bot_id and "day streak" in message.content and "Here are yesterday's results:" in message.content:   
+        if message.author.id == self.wordle_bot_id and self.STREAK_TEXT in message.content and self.RESULTS_TEXT in message.content:   
             logging.info("Wordle report detected.")
             await self.parse_wordle_results(message)
-        elif "day streak" in message.content and "Here are yesterday's results:" in message.content:
+        elif self.STREAK_TEXT in message.content and self.RESULTS_TEXT in message.content:
             # Testing purpose: simulate Wordle bot messages
             logging.info("Simulated Wordle report detected.")
             await self.parse_wordle_results(message)
@@ -89,14 +104,14 @@ class WordleParser(commands.Cog):
         for line in lines:
             if '/6:' in line:
                 # Extract score and users from each line (including X/6 for failures)
-                score_match = re.search(r'(\d|X)/6:', line)
+                score_match = re.search(self.PARSE_SCORE_PATTERN, line)
                 if score_match:
                     score_str = score_match.group(1)
                     # Convert X to 8 points, numbers stay as numbers
                     score = 8 if score_str == 'X' else int(score_str)
                     
                     # Extract mentioned users (@ mentions)
-                    user_mentions = re.findall(r'<@!?(\d+)>', line)
+                    user_mentions = re.findall(self.PARSE_USER_PATTERN, line)
                     
                     for user_id in user_mentions:
                         try:
@@ -185,17 +200,17 @@ class WordleParser(commands.Cog):
         errors = []
         
         # Parse Wordle bot format (multiple scores with users)
-        if re.search(r'\d+/6:|X/6:', score_data):
+        if re.search(self.WORDLE_SCORE_PATTERN, score_data):
             lines = score_data.split()
             current_score = None
             
             for token in lines:
-                score_match = re.match(r'^(\d|X)/6:?$', token.upper())
+                score_match = re.match(self.SCORE_MATCH_PATTERN, token.upper())
                 if score_match:
                     current_score = score_match.group(1)
                     continue
                 
-                user_match = re.match(r'^<@!?(\d+)>$', token)
+                user_match = re.match(self.USER_MENTION_PATTERN, token)
                 if user_match and current_score:
                     user_id = int(user_match.group(1))
                     score_value = 8 if current_score == 'X' else int(current_score)
@@ -228,7 +243,7 @@ class WordleParser(commands.Cog):
             score_str = score_match.group(1)
             score_value = 8 if score_str == 'X' else int(score_str)
             
-            if score_value not in [1, 2, 3, 4, 5, 6, 8]:
+            if score_value not in self.VALID_SCORES:
                 await ctx.message.add_reaction("❌")
                 await ctx.send("Those numbers are outside acceptable parameters. Scores must be 1-6 or X for complete failure.")
                 return
@@ -306,17 +321,17 @@ class WordleParser(commands.Cog):
         errors = []
         
         # Parse Wordle bot format (multiple scores with users)
-        if re.search(r'\d+/6:|X/6:', score_data):
+        if re.search(self.WORDLE_SCORE_PATTERN, score_data):
             lines = score_data.split()
             current_score = None
             
             for token in lines:
-                score_match = re.match(r'^(\d|X)/6:?$', token.upper())
+                score_match = re.match(self.SCORE_MATCH_PATTERN, token.upper())
                 if score_match:
                     current_score = score_match.group(1)
                     continue
                 
-                user_match = re.match(r'^<@!?(\d+)>$', token)
+                user_match = re.match(self.USER_MENTION_PATTERN, token)
                 if user_match and current_score:
                     user_id = int(user_match.group(1))
                     score_value = 8 if current_score == 'X' else int(current_score)
@@ -346,7 +361,7 @@ class WordleParser(commands.Cog):
             score_str = score_match.group(1)
             score_value = 8 if score_str == 'X' else int(score_str)
             
-            if score_value not in [1, 2, 3, 4, 5, 6, 8]:
+            if score_value not in self.VALID_SCORES:
                 await ctx.message.add_reaction("❌")
                 await ctx.send("Those numbers are outside acceptable parameters. Scores must be 1-6 or X for complete failure.")
                 return
