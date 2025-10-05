@@ -73,13 +73,19 @@ async def test_ignores_non_wordle_messages(parser_cog, mock_message):
     parser_cog.parse_wordle_results.assert_not_awaited()
 
 @pytest.mark.asyncio
-async def test_parse_single_user_score(parser_cog, mock_message, sample_wordle_results, mock_user):
+async def test_parse_single_user_score(parser_cog, mock_message, sample_wordle_results, mock_user, mocker):
     """Test parsing a message with one user score."""
     # Arrange
     mock_message.content = sample_wordle_results
         
     # Mock guild.get_member to return a fake user
     mock_message.guild.get_member.return_value = mock_user
+    
+    # Mock the DatabaseCog
+    mock_database_cog = mocker.MagicMock()
+    mock_database_cog.has_duplicate_submission.return_value = False
+    mock_database_cog.save_wordle_score.return_value = True
+    parser_cog.bot.get_cog.return_value = mock_database_cog
 
     # Act
     await parser_cog.parse_wordle_results(mock_message)
@@ -100,15 +106,21 @@ async def test_parse_no_scores_found(parser_cog, mock_message, sample_wordle_res
         
     # Assert - should send "no scores" message
     mock_message.channel.send.assert_awaited_once_with(
-        "I couldn't find any scores to record this time. Perhaps everyone is still working on their puzzles."
+        "I found nothing worth recording. Either the report is broken, or you've all collectively failed me."
     )
 
 @pytest.mark.asyncio 
-async def test_parse_failed_wordle_x_score(parser_cog, mock_message, sample_wordle_results, mock_user):
+async def test_parse_failed_wordle_x_score(parser_cog, mock_message, sample_wordle_results, mock_user, mocker):
     """Test parsing a failed Wordle (X/6) gives 8 points."""
     # Arrange
     mock_message.content = sample_wordle_results.replace("4/6:", "X/6:")
     mock_message.guild.get_member.return_value = mock_user
+    
+    # Mock the DatabaseCog
+    mock_database_cog = mocker.MagicMock()
+    mock_database_cog.has_duplicate_submission.return_value = False
+    mock_database_cog.save_wordle_score.return_value = True
+    parser_cog.bot.get_cog.return_value = mock_database_cog
         
     # Act  
     await parser_cog.parse_wordle_results(mock_message)

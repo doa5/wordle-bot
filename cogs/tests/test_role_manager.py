@@ -14,10 +14,13 @@ def role_cog(mock_bot):
 
 
 @pytest.fixture
-def mock_ctx_with_author(mock_ctx, mock_user):
-    """Create a mock context with a properly set up author."""
+def mock_ctx_with_author(mock_ctx, mock_user, mocker):
+    """Create a mock context with a properly set up author and message."""
     mock_ctx.author = mock_user
-    mock_ctx.author.mention = "@testuser" 
+    mock_ctx.author.mention = "@testuser"
+    # Add the missing message attribute with add_reaction method
+    mock_ctx.message = mocker.MagicMock()
+    mock_ctx.message.add_reaction = mocker.AsyncMock()
     return mock_ctx
 
 
@@ -32,15 +35,16 @@ async def test_done_role_found_and_assigned(role_cog, mock_ctx_with_author, mock
     # Mock discord.utils.get to return our role
     mock_get = mocker.patch('discord.utils.get', return_value=role)
     log_info = mocker.patch("logging.info")
-    
+
     # Act
-    await role_cog.done.callback(role_cog, mock_ctx_with_author)
+    await role_cog.give_done_role.callback(role_cog, mock_ctx_with_author)
     
     # Assert
     mock_get.assert_called_once_with(mock_ctx_with_author.guild.roles, name="done")
     mock_ctx_with_author.author.add_roles.assert_awaited_once_with(role)
+    mock_ctx_with_author.message.add_reaction.assert_awaited_once_with("🏇") 
     mock_ctx_with_author.send.assert_awaited_once_with(
-        "@testuser, so you're done? Well done on completing today's puzzle."
+        "@testuser, well done. Access granted."
     )
     log_info.assert_called_once()
 
@@ -55,13 +59,13 @@ async def test_done_role_not_found(role_cog, mock_ctx_with_author, mocker):
     # Mock discord.utils.get to return None (role not found)
     mock_get = mocker.patch('discord.utils.get', return_value=None)
     log_warn = mocker.patch("logging.warning")
-    
     # Act
-    await role_cog.done.callback(role_cog, mock_ctx_with_author)
+    await role_cog.give_done_role.callback(role_cog, mock_ctx_with_author)
     
     # Assert
     mock_get.assert_called_once_with(mock_ctx_with_author.guild.roles, name="done")
     mock_ctx_with_author.author.add_roles.assert_not_awaited()
+    mock_ctx_with_author.message.add_reaction.assert_awaited_once_with("❌")  
     mock_ctx_with_author.send.assert_awaited_once_with(
         "I'm afraid I can't find the 'done' role. Perhaps it needs to be created first?"
     )
@@ -82,7 +86,7 @@ async def test_done_role_assignment_fails(role_cog, mock_ctx_with_author, mocker
     
     # Act & Assert - Should propagate the exception
     with pytest.raises(discord.Forbidden):
-        await role_cog.done.callback(role_cog, mock_ctx_with_author)
+        await role_cog.give_done_role.callback(role_cog, mock_ctx_with_author)
 
 
 @pytest.mark.asyncio
