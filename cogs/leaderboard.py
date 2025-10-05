@@ -132,7 +132,7 @@ class LeaderboardCog(commands.Cog):
 
         await ctx.send(f"Status report: {now}\nLeaderboard access: {available}\nNext: {next_time}")
 
-    @commands.command()
+    @commands.command(aliases=["resetlb", "reset"])
     @commands.is_owner() 
     async def reset_leaderboard(self, ctx: commands.Context) -> None:
         """
