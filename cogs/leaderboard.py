@@ -87,12 +87,12 @@ class LeaderboardCog(commands.Cog):
         query = '''
             SELECT username, SUM(score) as total_score, COUNT(*) as games_played
             FROM wordle_scores 
-            WHERE date BETWEEN ? AND ?
+            WHERE guild_id = ? AND date BETWEEN ? AND ?
             GROUP BY user_id, username
             ORDER BY total_score ASC
             LIMIT 10
         '''
-        params = (week_start.strftime('%Y-%m-%d'), week_end.strftime('%Y-%m-%d'))
+        params = (ctx.guild.id, week_start.strftime('%Y-%m-%d'), week_end.strftime('%Y-%m-%d'))
         results = database_cog.execute_query(query, params)
         logging.info(f"Top scores queried for guild {ctx.guild.id}")
         
@@ -116,7 +116,58 @@ class LeaderboardCog(commands.Cog):
                 leaderboard += f"{i}. **{username}**: {total_score} points\n"
 
         await ctx.send(leaderboard)
+        
+        doa_winner = await self.is_doa_winner(ctx)
+        if doa_winner:
+            # Celebrate with Oguri Cap if cog is available
+            oguri_cap_cog = self.bot.get_cog('OguriCapCog')
+            if oguri_cap_cog:
+                await oguri_cap_cog.celebrate_victory(ctx)
+            else:
+                logging.warning("OguriCapCog not found for doa celebration.")
+        else:
+            logging.info("doa is not the weekly winner this time.")
         logging.info(f"Weekly leaderboard sent for guild {ctx.guild.id}")
+
+    async def is_doa_winner(self, ctx: commands.Context) -> bool:
+        """Check if 'doa' is the current week's leaderboard winner.
+
+        Args:
+            ctx (commands.Context): The command context.
+        Returns:
+            bool: True if 'doa' is the top of the leaderboard this week.
+        """
+
+        today = datetime.now()
+        days_since_monday = today.weekday()  # 0=Monday, 6=Sunday
+        week_start = today - timedelta(days=days_since_monday)
+        week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_end = week_start + timedelta(days=6, hours=23, minutes=59, seconds=59)
+        
+        # Get database cog for non-blocking operations
+        database_cog = self.bot.get_cog('DatabaseCog')
+        if not database_cog:
+            logging.warning("DatabaseCog not found when checking for doa winner.")
+            return False
+            
+        query = '''
+            SELECT username, SUM(score) as total_score
+            FROM wordle_scores 
+            WHERE guild_id = ? AND date BETWEEN ? AND ?
+            GROUP BY user_id, username
+            ORDER BY total_score ASC
+            LIMIT 1
+        '''
+        params = (ctx.guild.id, week_start.strftime('%Y-%m-%d'), week_end.strftime('%Y-%m-%d'))
+        results = database_cog.execute_query(query, params)
+        logging.info(f"Top score queried for doa check in guild {ctx.guild.id}")
+        
+        if results and results[0][0].lower() == "doa":
+            logging.info(f"'doa' is the current week's winner in guild {ctx.guild.id}")
+            return True
+        
+        logging.info(f"'doa' is NOT the current week's winner in guild {ctx.guild.id}")
+        return False
 
     @commands.command(aliases=["lbstatus", "lbwhen", "status"])
     @commands.is_owner() 
@@ -132,7 +183,7 @@ class LeaderboardCog(commands.Cog):
 
         await ctx.send(f"Status report: {now}\nLeaderboard access: {available}\nNext: {next_time}")
 
-    @commands.command(aliases=["resetlb", "reset"])
+    @commands.command(aliases=["resetlb"])
     @commands.is_owner() 
     async def reset_leaderboard(self, ctx: commands.Context) -> None:
         """
@@ -149,12 +200,15 @@ class LeaderboardCog(commands.Cog):
             await ctx.send("Database unavailable.")
             return
             
-        # Use DatabaseCog for non-blocking delete
-        query = 'DELETE FROM wordle_scores'
-        deleted_rows = database_cog.execute_non_select(query, ())
-
-        await ctx.send(f"Archives cleared. {deleted_rows} entries processed.")
-        logging.info(f"Leaderboard reset for guild {ctx.guild.id}, {deleted_rows} entries deleted.")
+        count_query = 'SELECT * FROM wordle_scores WHERE guild_id = ?'
+        existing_entries = database_cog.execute_query(count_query, (ctx.guild.id,))
+        
+        delete_query = 'DELETE FROM wordle_scores WHERE guild_id = ?'
+        database_cog.execute_query(delete_query, (ctx.guild.id,))
+        
+        deleted_count = len(existing_entries)
+        await ctx.send(f"Archives cleared. {deleted_count} entries processed.")
+        logging.info(f"Leaderboard reset for guild {ctx.guild.id}, {deleted_count} entries deleted.")
 
     @commands.command(aliases=["showleaderboard", "showlb"])
     @commands.is_owner()    

@@ -31,7 +31,7 @@ async def load_cogs(bot: commands.Bot) -> None:
         "cogs.wordle_parser",
         "cogs.leaderboard",
         "utils.database",
-        # "cogs.utility",
+        "cogs.oguri_cap"
     ]
     
     for cog in cogs_to_load:

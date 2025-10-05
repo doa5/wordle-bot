@@ -35,6 +35,7 @@ class DatabaseCog(commands.Cog):
                 CREATE TABLE IF NOT EXISTS wordle_scores (
                     id INTEGER PRIMARY KEY,
                     user_id TEXT NOT NULL,
+                    guild_id TEXT NOT NULL,
                     username TEXT,
                     score INTEGER NOT NULL,
                     date TEXT NOT NULL,
@@ -43,10 +44,13 @@ class DatabaseCog(commands.Cog):
             ''')
             self.connection.commit()
             logging.info("Database tables ensured.")
+            
+            
         except sqlite3.Error as e:
             logging.error(f"Error creating tables: {e}")
             self.connection = None
     
+
     def close_connection(self) -> None:
         if self.connection:
             self.connection.close()
@@ -83,12 +87,13 @@ class DatabaseCog(commands.Cog):
             logging.error(f"Database query error: {e}")
             return []
 
-    def save_wordle_score(self, user_id: int, username: str, score: int, date: str) -> bool:
+    def save_wordle_score(self, user_id: int, guild_id: int, username: str, score: int, date: str) -> bool:
         """
         Save a Wordle score to the database.
 
         Args:
             user_id: Discord user ID.
+            guild_id: Discord server (guild) ID.
             username: Discord username.
             score: Number of attempts (1-6) or 8 for failure.
             date: Date when the report was processed (YYYY-MM-DD format).
@@ -102,10 +107,10 @@ class DatabaseCog(commands.Cog):
             logging.error("No database connection.")
             return False
         query = """INSERT OR REPLACE INTO wordle_scores 
-                   (user_id, username, score, date) 
-                   VALUES (?, ?, ?, ?)"""
-        params = (user_id, username, score, date)
-        logging.info(f"Saving score for user {username} ({user_id}): {score} on {date}")
+                   (user_id, guild_id, username, score, date) 
+                   VALUES (?, ?, ?, ?, ?)"""
+        params = (user_id, guild_id, username, score, date)
+        logging.info(f"Saving score for user {username} ({user_id}) in guild {guild_id}: {score} on {date}")
         try:
             cursor = self.connection.cursor()
             cursor.execute(query, params)
@@ -116,19 +121,20 @@ class DatabaseCog(commands.Cog):
             logging.error(f"Error saving score: {e}")
             return False
     
-    def has_duplicate_submission(self, user_id: int, date: str) -> bool:
-        """Check if a user has already submitted a score for a specific date.
+    def has_duplicate_submission(self, user_id: int, guild_id: int, date: str) -> bool:
+        """Check if a user has already submitted a score for a specific date in a guild.
 
         Args:
             user_id (int): The ID of the user.
+            guild_id (int): The ID of the guild (server).
             date (str): The date to check (YYYY-MM-DD format).
 
         Returns:
             bool: True if a duplicate submission exists, False otherwise.
         """
-        query = "SELECT id FROM wordle_scores WHERE user_id = ? AND date = ?"
-        params = (user_id, date)
-        logging.info(f"Checking for duplicate submission for user {user_id} on {date}")
+        query = "SELECT id FROM wordle_scores WHERE user_id = ? AND guild_id = ? AND date = ?"
+        params = (user_id, guild_id, date)
+        logging.info(f"Checking for duplicate submission for user {user_id} in guild {guild_id} on {date}")
         result = self.execute_query(query, params)
         logging.info(f"Duplicate submission check result: {bool(result)}")
         return bool(result)
