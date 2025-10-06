@@ -207,10 +207,16 @@ class DatabaseCog(commands.Cog):
                 except asyncio.TimeoutError:
                     continue
                 except Exception as e:
-                    print(f"Error in log processor: {e}")
+                    # Log processor errors shouldn't crash the bot
                     await asyncio.sleep(self.LOG_ERROR_RETRY_DELAY)
         except asyncio.CancelledError:
             pass
+
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        """Start log processor when bot is ready."""
+        if self.log_processor_task is None:
+            self.log_processor_task = asyncio.create_task(self.log_processor())
 
     @commands.Cog.listener()
     async def on_cog_unload(self) -> None:

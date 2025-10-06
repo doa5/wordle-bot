@@ -20,9 +20,71 @@ def create_bot() -> commands.Bot:
     intents.message_content = True
     intents.members = True
     
-    bot = commands.Bot(command_prefix='woguri ', intents=intents)
+    bot = commands.Bot(command_prefix=['Woguri ', 'woguri '], intents=intents)
     logging.info("Bot instance created")
     return bot
+
+async def setup_error_handlers(bot: commands.Bot) -> None:
+    """Set up error handlers for the bot (Oguri Cap style)."""
+    
+    @bot.event
+    async def on_command_error(ctx: commands.Context, error: commands.CommandError):
+        """Handle command errors with Oguri Cap's calm tone."""
+        
+        if isinstance(error, commands.CommandNotFound):
+            # Handle both "Woguri " and "woguri " prefixes
+            message_content = ctx.message.content if ctx.message.content else ""
+            if message_content.startswith('Woguri '):
+                invalid_command = message_content.replace('Woguri ', '', 1).split()[0] if message_content else "???"
+            elif message_content.startswith('woguri '):
+                invalid_command = message_content.replace('woguri ', '', 1).split()[0] if message_content else "???"
+            else:
+                invalid_command = "???"
+            
+            logging.warning(f"Invalid command '{invalid_command}' used by {ctx.author} ({ctx.author.id}) in guild {ctx.guild.id if ctx.guild else 'DM'}")
+            
+            responses = [
+                f"'{invalid_command}' isn’t a valid command.",
+                f"I don’t recognise '{invalid_command}'.",
+                f"That command doesn’t exist.",
+                f"'{invalid_command}'... not found.",
+                f"No command by that name.",
+                f"Invalid command: '{invalid_command}'.",
+                f"I don’t think that’s right.",
+                f"Check your input. '{invalid_command}' isn’t one of mine."
+            ]
+            
+            import random
+            response = random.choice(responses)
+            await ctx.send(response, delete_after=8)
+            
+        elif isinstance(error, commands.NotOwner):
+            logging.warning(f"Non-owner {ctx.author} ({ctx.author.id}) tried to use owner command {ctx.command}")
+            
+            responses = [
+            "That command’s above your pay grade.",
+            "Only really cool people can use that command. And you're...",
+            "Oh thats not..."
+            "He pays for my food. That’s why he gets access.",
+            "You’re not cleared for that. Sorry buddy.",
+            "You could try again, but it won’t change anything."
+        ]
+            
+            import random
+            response = random.choice(responses)
+            await ctx.send(response, delete_after=8)
+            
+        elif isinstance(error, commands.MissingRequiredArgument):
+            logging.info(f"Missing argument for command {ctx.command} by {ctx.author}")
+            await ctx.send("You’re missing a required argument.", delete_after=10)
+            
+        elif isinstance(error, commands.BadArgument):
+            logging.info(f"Bad argument for command {ctx.command} by {ctx.author}: {error}")
+            await ctx.send("Invalid input type. Try again.", delete_after=10)
+            
+        else:
+            logging.error(f"Unexpected error in command {ctx.command}: {error}", exc_info=True)
+            await ctx.send("An error occurred. I’ll keep running.", delete_after=5)
 
 async def load_cogs(bot: commands.Bot) -> None:
     """Load all cog extensions."""
@@ -52,6 +114,7 @@ async def main() -> None:
         return
 
     bot = create_bot()
+    await setup_error_handlers(bot)
     await load_cogs(bot)
     try:
         await bot.start(token)
