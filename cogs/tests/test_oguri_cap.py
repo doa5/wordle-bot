@@ -78,7 +78,7 @@ async def test_snack_command_sends_embed(cog):
 
 @pytest.mark.asyncio
 async def test_celebrate_victory_command_sends_embed(cog):
-    """Test the celebrate_victory command sends an embed with a victory gif. """
+    """Test the celebrate_victory command sends an embed with a victory gif."""
     ctx = mock.AsyncMock()
     with mock.patch('random.choice', return_value=cog.gifs['victory'][0]):
         await cog.celebrate_victory.callback(cog, ctx)
