@@ -31,7 +31,7 @@ cat > .env << EOF
 DISCORD_TOKEN=your_discord_bot_token_here
 WORDLE_BOT_ID=your_wordle_bot_id_here
 EOF
-
+chmod 600 .env
 echo "IMPORTANT: Edit /home/ubuntu/wordle-bot/.env with your actual Discord tokens!"
 
 # Set up systemd service
