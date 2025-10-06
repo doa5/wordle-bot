@@ -1,5 +1,5 @@
 #!/bin/bash
-# * Generated with assistance from Copilot AI, I don't know much about Oracle Cloud
+# * Generated with assistance from Copilot AI, I don't know much about Oracle Cloud setup procedures.
 # Oracle Cloud VM Setup Script for Wordle Bot
 # Run this script after creating your VM
 
@@ -16,8 +16,8 @@ cd /home/ubuntu
 git clone https://github.com/doa5/wordle-bot.git
 cd wordle-bot
 
-# Switch to deployment branch
-git checkout deployment
+# Switch to main branch
+git checkout main
 
 # Create virtual environment
 python3 -m venv venv
