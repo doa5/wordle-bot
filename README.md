@@ -1,12 +1,12 @@
-# Wordle Bot
+# Wordle Bot ( ◡̀_◡́)ᕤ
 
 Discord bot that tracks Wordle scores with an Oguri Cap personality. Automatically parses results and maintains weekly leaderboards.
 
 ## Add to your server
 
-[Invite Woguri Bot →](https://discord.com/oauth2/authorize?client_id=1422909283451932803&permissions=275146730560&integration_type=0&scope=bot)
+[Invite Woguri Bot](https://discord.com/oauth2/authorize?client_id=1422909283451932803&permissions=275146730560&integration_type=0&scope=bot)
 
-The bot is hosted and maintained - just invite and use!
+The bot is hosted and maintained, just invite and use.
 
 ## What it does
 
@@ -14,7 +14,7 @@ The bot is hosted and maintained - just invite and use!
 - Tracks scores in SQLite database with duplicate prevention
 - Weekly leaderboards available Sunday evenings only
 - Role management for daily puzzle completion
-- Oguri Cap themed responses because why not
+- Oguri Cap themed responses because why not (￣ ▽ ￣)"
 - Manual score entry and database admin tools
 - Terminal logging to Discord for remote monitoring
 
@@ -36,7 +36,7 @@ Works with both `woguri` and `Woguri` prefixes. Invalid commands get Oguri Cap r
 
 ## For Developers
 
-Want to run your own instance? Here's how:
+If you want to run your own instance, here's how:
 
 ## Setup
 
@@ -63,7 +63,7 @@ The bot needs basic Discord permissions (read/send messages, manage roles, add r
 
 ## How it works
 
-Bot listens for Wordle result messages, extracts user scores, saves them to database. Users can get a role when they're done with the daily puzzle. Weekly leaderboard shows up Sunday evenings with total scores (lower is better).
+Bot listens for Wordle result messages, extracts user scores, saves them to database. Users can get a role when they're done with the daily puzzle. Weekly leaderboard shows up Sunday evenings with total scores (lower is better). (⁀ᗢ⁀)
 
 Scoring: 1-6 attempts recorded as-is, failed attempts (X/6) count as 8 points.
 
@@ -81,6 +81,8 @@ Has a full test suite with pytest covering the main functionality.
 
 ## Personal project notes
 
-This is just for fun and learning Discord.py development. The Oguri Cap personality is from Uma Musume and makes the bot responses more interesting because she's based.
+This is just for fun and learning Discord.py development. The Oguri Cap personality is from Uma Musume and makes the bot responses more interesting because she's based. ᕙ(‾̀◡‾́)ᕗ
 
 Deployed on Oracle Cloud VM because why pay for hosting when you can get it free. Has terminal logging to Discord so you can monitor it remotely.
+
+And its Woguri because Wordle + Oguri in case you didn't catch on. (─‿─)
