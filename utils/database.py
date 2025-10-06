@@ -179,7 +179,7 @@ class DatabaseCog(commands.Cog):
 
     @commands.command(aliases=["dbguilds"])
     @commands.is_owner() 
-    async def db_guilds(self, ctx):
+    async def db_guilds(self, ctx: commands.Context):
         """List all servers using the bot."""
         query = """SELECT guild_id, COUNT(*) as records, 
                         MAX(date) as latest_date
