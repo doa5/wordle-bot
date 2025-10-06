@@ -36,6 +36,11 @@ from utils.database import DatabaseCog
 def mock_bot():
     bot = mock.Mock(spec=commands.Bot)
     bot.get_guild = mock.Mock(return_value=None)
+
+    mock_loop = mock.Mock()
+    mock_loop.create_task = mock.Mock(return_value=mock.Mock())
+    bot.loop = mock_loop
+    bot.is_closed = mock.Mock(return_value=False)
     return bot
 
 @pytest.fixture

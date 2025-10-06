@@ -2,16 +2,66 @@ import discord
 from discord.ext import commands
 import logging
 import sqlite3
+import asyncio
+
+class DiscordLogHandler(logging.Handler):
+    """Custom logging handler that sends terminal logs to Discord"""
+    
+    def __init__(self, database_cog):
+        super().__init__()
+        self.database_cog = database_cog
+        self.setLevel(logging.INFO)  # Capture INFO and above
+        
+        formatter = logging.Formatter('%(levelname)s: %(message)s')
+        self.setFormatter(formatter)
+    
+    def emit(self, record):
+        """Called whenever a log message is generated"""
+        try:
+            log_message = self.format(record)
+            
+            # Add emoji based on log level
+            if record.levelno >= logging.ERROR:
+                emoji = "❌"
+            elif record.levelno >= logging.WARNING:
+                emoji = "⚠️"
+            else:
+                emoji = "ℹ️"
+            
+            formatted_message = f"{emoji} `{log_message}`"
+            
+            if self.database_cog.log_channel_id:
+                try:
+                    self.database_cog.log_queue.put_nowait(formatted_message)
+                except asyncio.QueueFull:
+                    pass
+        except Exception:
+            pass  
 
 class DatabaseCog(commands.Cog):
     """
     Cog to manage database connections and operations.
     """
+    MAXIMUM_LOG_QUEUE = 100
+    LOG_PROCESSOR_TIMEOUT = 5.0  # seconds to wait for new log messages
+    LOG_SEND_DELAY = 1.0         # seconds between Discord messages to avoid rate limits
+    LOG_ERROR_RETRY_DELAY = 5.0  # seconds to wait after log processor errors
+    
     def __init__(self, bot: commands.Bot) -> None:
         """Initialize the DatabaseCog with bot instance."""
         self.bot = bot
         self.database_path = 'wordle_scores.db'
         self.connection = None
+        
+        self.log_queue = asyncio.Queue(maxsize=self.MAXIMUM_LOG_QUEUE)
+        self.log_channel_id = None
+        self.discord_handler = DiscordLogHandler(self)
+        self.log_processor_task = None
+        
+        # Start log processor (only if bot has a loop - not in tests)
+        if hasattr(self.bot, 'loop') and hasattr(self.bot.loop, 'create_task'):
+            self.log_processor_task = self.bot.loop.create_task(self.log_processor())
+        
         self.connect_to_database()
 
     def connect_to_database(self) -> None:
@@ -140,9 +190,43 @@ class DatabaseCog(commands.Cog):
         logging.info(f"Duplicate submission check result: {bool(result)}")
         return bool(result)
 
+    async def log_processor(self) -> None:
+        """Background task to process log messages and send them to Discord channel."""
+        try:
+            while not self.bot.is_closed():
+                try:
+                    message = await asyncio.wait_for(self.log_queue.get(), timeout=self.LOG_PROCESSOR_TIMEOUT)
+                    
+                    if self.log_channel_id:
+                        channel = self.bot.get_channel(self.log_channel_id)
+                        if channel:
+                            await channel.send(message)
+                    
+                    await asyncio.sleep(self.LOG_SEND_DELAY)
+                    
+                except asyncio.TimeoutError:
+                    continue
+                except Exception as e:
+                    print(f"Error in log processor: {e}")
+                    await asyncio.sleep(self.LOG_ERROR_RETRY_DELAY)
+        except asyncio.CancelledError:
+            pass
+
     @commands.Cog.listener()
     async def on_cog_unload(self) -> None:
-        """Ensure the database connection is closed when the cog is unloaded."""
+        """Cleanup when the cog is unloaded."""
+        # Remove handler from root logger
+        root_logger = logging.getLogger()
+        if hasattr(self, 'discord_handler'):
+            try:
+                root_logger.removeHandler(self.discord_handler)
+            except ValueError:
+                pass  
+        
+        # Cancel log processor task
+        if self.log_processor_task and hasattr(self.log_processor_task, 'done') and not self.log_processor_task.done():
+            self.log_processor_task.cancel()
+            
         self.close_connection()
 
     @commands.command(aliases=["dbstats"])
@@ -152,6 +236,9 @@ class DatabaseCog(commands.Cog):
 
         Args:
             ctx: The command context.
+        
+        Example:
+            woguri db_stats
         """
         logging.info("Gathering database statistics.")
         total_query = "SELECT COUNT(*) FROM wordle_scores"
@@ -179,8 +266,15 @@ class DatabaseCog(commands.Cog):
 
     @commands.command(aliases=["dbguilds"])
     @commands.is_owner() 
-    async def db_guilds(self, ctx: commands.Context):
-        """List all servers using the bot."""
+    async def db_guilds(self, ctx: commands.Context) -> None:
+        """List all servers using the bot.
+        
+        Args:
+            ctx: The command context.
+
+        Example:
+            woguri db_guilds
+        """
         query = """SELECT guild_id, COUNT(*) as records, 
                         MAX(date) as latest_date
                 FROM wordle_scores 
@@ -214,6 +308,52 @@ class DatabaseCog(commands.Cog):
             )
         
         await ctx.send(embed=embed)
+
+    @commands.command(aliases=["enable_terminal_logs"])
+    @commands.is_owner()
+    async def enable_terminal_logs(self, ctx: commands.Context, channel: discord.TextChannel = None) -> None:
+        """Enable capturing terminal logs to Discord
+        Args:
+            ctx: The command context.
+            channel: Optional Discord text channel to send logs to. Defaults to current channel.
+        
+        Example:
+            woguri enable_terminal_logs # uses current channel
+            woguri enable_terminal_logs #general # uses #general channel
+        """
+        if channel is None:
+            channel = ctx.channel
+        
+        self.log_channel_id = channel.id
+        
+        root_logger = logging.getLogger()
+        if self.discord_handler not in root_logger.handlers:
+            root_logger.addHandler(self.discord_handler)
+        
+        await ctx.message.add_reaction("✅")
+        await ctx.send(f"Terminal logs now being sent to {channel.mention}, good job.")
+        logging.info("Terminal logging to Discord enabled")
+
+    @commands.command(aliases=["disable_terminal_logs"])
+    @commands.is_owner()
+    async def disable_terminal_logs(self, ctx: commands.Context) -> None:
+        """Disable terminal log capture
+        Args:
+            ctx: The command context.
+
+        Example:
+            woguri disable_terminal_logs
+        """
+        root_logger = logging.getLogger()
+        try:
+            root_logger.removeHandler(self.discord_handler)
+        except ValueError:
+            pass  
+        
+        self.log_channel_id = None
+        await ctx.message.add_reaction("❌")
+        await ctx.send("Terminal log capture disabled. Seriously?")
+        logging.info("Terminal logging to Discord disabled")
 
 async def setup(bot: commands.Bot) -> None:
     """Setup function to add the cog to the bot."""
