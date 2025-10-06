@@ -85,4 +85,4 @@ This is just for fun and learning Discord.py development. The Oguri Cap personal
 
 Deployed on Oracle Cloud VM because why pay for hosting when you can get it free. Has terminal logging to Discord so you can monitor it remotely.
 
-And its Woguri because Wordle + Oguri in case you didn't catch on. (─‿─)
+And it's Woguri because Wordle + Oguri in case you didn't catch on. (─‿─)
