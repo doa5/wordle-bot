@@ -47,8 +47,9 @@ class DatabaseCog(commands.Cog):
         self.bot = bot
         self.database_path = 'wordle_scores.db'
         self.connection = None
+        MAXIMUM_LOG_QUEUE = 100
         
-        self.log_queue = asyncio.Queue(maxsize=100)
+        self.log_queue = asyncio.Queue(maxsize=MAXIMUM_LOG_QUEUE)
         self.log_channel_id = None
         self.discord_handler = DiscordLogHandler(self)
         self.log_processor_task = None
