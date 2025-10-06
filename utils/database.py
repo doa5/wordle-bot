@@ -309,7 +309,7 @@ class DatabaseCog(commands.Cog):
         
         await ctx.send(embed=embed)
 
-    @commands.command(aliases=["enable_terminal_logs"])
+    @commands.command()
     @commands.is_owner()
     async def enable_terminal_logs(self, ctx: commands.Context, channel: discord.TextChannel = None) -> None:
         """Enable capturing terminal logs to Discord
@@ -334,7 +334,7 @@ class DatabaseCog(commands.Cog):
         await ctx.send(f"Terminal logs now being sent to {channel.mention}, good job.")
         logging.info("Terminal logging to Discord enabled")
 
-    @commands.command(aliases=["disable_terminal_logs"])
+    @commands.command()
     @commands.is_owner()
     async def disable_terminal_logs(self, ctx: commands.Context) -> None:
         """Disable terminal log capture
