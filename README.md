@@ -23,7 +23,7 @@ The bot is hosted and maintained - just invite and use!
 - `woguri done` - Get the "done" role after completing your puzzle
 - `woguri leaderboard` - View weekly scores (Sunday 5-11:59 PM only)
 - `woguri snack` - Random Oguri Cap GIF because she's hungry
-- `woguri manual_score @user 3 2024-01-15` - Add scores manually (owner, admin)
+- `woguri manual_score 2024-01-15 @user 3` - Add scores manually (owner, admin)
 - `woguri db_stats` - Database statistics (owner only)
 - `woguri db_guilds` - Show all servers using the bot (owner only)
 - `woguri enable_terminal_logs` - Send bot logs to Discord (owner only)
