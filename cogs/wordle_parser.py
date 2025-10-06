@@ -162,7 +162,7 @@ class WordleParser(commands.Cog):
             return False
 
     @commands.command(aliases=["add_score", "manual_score"])
-    @commands.is_owner()
+    @commands.check_any(commands.has_permissions(administrator=True), commands.is_owner())
     async def add_manual_score(self, ctx: commands.Context, date: str, *, score_data: str) -> None:
         """
         Manually add Wordle scores for users on a specific date.

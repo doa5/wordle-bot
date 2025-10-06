@@ -2,6 +2,12 @@
 
 Discord bot that tracks Wordle scores with an Oguri Cap personality. Automatically parses results and maintains weekly leaderboards.
 
+## Add to your server
+
+[Invite Woguri Bot →](https://discord.com/oauth2/authorize?client_id=1422909283451932803&permissions=275146730560&integration_type=0&scope=bot)
+
+The bot is hosted and maintained - just invite and use!
+
 ## What it does
 
 - Automatically detects Wordle results from Discord messages
@@ -9,13 +15,28 @@ Discord bot that tracks Wordle scores with an Oguri Cap personality. Automatical
 - Weekly leaderboards available Sunday evenings only
 - Role management for daily puzzle completion
 - Oguri Cap themed responses because why not
+- Manual score entry and database admin tools
+- Terminal logging to Discord for remote monitoring
 
 ## Commands
 
 - `woguri done` - Get the "done" role after completing your puzzle
 - `woguri leaderboard` - View weekly scores (Sunday 5-11:59 PM only)
+- `woguri snack` - Random Oguri Cap GIF because she's hungry
+- `woguri manual_score 2024-01-15 @user 3` - Add scores manually (owner, admin)
+- `woguri db_stats` - Database statistics (owner only)
+- `woguri db_guilds` - Show all servers using the bot (owner only)
+- `woguri enable_terminal_logs` - Send bot logs to Discord (owner only)
+- `woguri disable_terminal_logs` - Stop Discord logging (owner only)
+- `woguri log_status` - Check logging system status (owner only)
 - `woguri resetlb` - Clear database (owner only)
 - `woguri showlb` - Show leaderboard outside of view window (owner only)
+
+Works with both `woguri` and `Woguri` prefixes. Invalid commands get Oguri Cap responses.
+
+## For Developers
+
+Want to run your own instance? Here's how:
 
 ## Setup
 
@@ -51,12 +72,15 @@ Scoring: 1-6 attempts recorded as-is, failed attempts (X/6) count as 8 points.
 Built with Discord.py cogs:
 
 - WordleParser handles message detection
-- DatabaseCog manages SQLite operations
+- DatabaseCog manages SQLite operations and terminal logging
 - LeaderboardCog does weekly reports
 - RoleCog handles role assignments
+- OguriCapCog for personality and GIFs
 
 Has a full test suite with pytest covering the main functionality.
 
 ## Personal project notes
 
 This is just for fun and learning Discord.py development. The Oguri Cap personality is from Uma Musume and makes the bot responses more interesting because she's based.
+
+Deployed on Oracle Cloud VM because why pay for hosting when you can get it free. Has terminal logging to Discord so you can monitor it remotely.
