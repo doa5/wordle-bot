@@ -30,7 +30,7 @@ def test_get_random_gif_empty_category(cog):
 
 @pytest.mark.asyncio
 async def test_on_message_triggers_response(cog, bot):
-    """Test that on_message triggers a response when 'food' is mentioned. """
+    """Test that on_message triggers a response when 'food' is mentioned."""
     message = mock.Mock()
     message.author = mock.Mock()
     bot.user = mock.Mock()
