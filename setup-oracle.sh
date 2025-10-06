@@ -1,5 +1,5 @@
 #!/bin/bash
-# * Generated with assistance from Copilot AI, I dont know much about Oracle Cloud
+# * Generated with assistance from Copilot AI, I don't know much about Oracle Cloud
 # Oracle Cloud VM Setup Script for Wordle Bot
 # Run this script after creating your VM
 
