@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 import logging
 import sqlite3
@@ -143,6 +144,76 @@ class DatabaseCog(commands.Cog):
     async def on_cog_unload(self) -> None:
         """Ensure the database connection is closed when the cog is unloaded."""
         self.close_connection()
+
+    @commands.command(aliases=["dbstats"])
+    @commands.is_owner()
+    async def db_stats(self, ctx: commands.Context) -> None:
+        """Show database statistics.
+
+        Args:
+            ctx: The command context.
+        """
+        logging.info("Gathering database statistics.")
+        total_query = "SELECT COUNT(*) FROM wordle_scores"
+        total_result = self.execute_query(total_query)
+        total_count = total_result[0][0] if total_result else 0
+        logging.info(f"Total records in database: {total_count}")
+        
+        guild_query = "SELECT COUNT(*) FROM wordle_scores WHERE guild_id = ?"
+        guild_result = self.execute_query(guild_query, (ctx.guild.id,))
+        guild_count = guild_result[0][0] if guild_result else 0
+        logging.info(f"Records for guild {ctx.guild.id}: {guild_count}")
+        
+        servers_query = "SELECT COUNT(DISTINCT guild_id) FROM wordle_scores"
+        servers_result = self.execute_query(servers_query)
+        servers_count = servers_result[0][0] if servers_result else 0
+        logging.info(f"Database stats - Total: {total_count}, This Guild: {guild_count}, Total Guilds: {servers_count}")
+        
+        embed = discord.Embed(title="Database Statistics", color=0x4d79ff)
+        embed.add_field(name="Total Records", value=total_count, inline=True)
+        embed.add_field(name="This Server", value=guild_count, inline=True)  
+        embed.add_field(name="Total Servers", value=servers_count, inline=True)
+        logging.info("Sending database statistics embed.")
+        
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=["dbguilds"])
+    @commands.is_owner() 
+    async def db_guilds(self, ctx: commands.Context):
+        """List all servers using the bot."""
+        query = """SELECT guild_id, COUNT(*) as records, 
+                        MAX(date) as latest_date
+                FROM wordle_scores 
+                GROUP BY guild_id 
+                ORDER BY records DESC"""
+        
+        results = self.execute_query(query)
+        logging.info(f"Retrieved {len(results)} guilds from database.")
+        
+        if not results:
+            await ctx.send("No data found in database.")
+            logging.info("No data found in database.")
+            return
+        
+        embed = discord.Embed(title="Database Servers", color=0x4d79ff)
+        
+        for guild_id, count, latest in results[:10]:  # Show top 10
+            guild_name = f"Guild {guild_id}"
+            try:
+                guild = self.bot.get_guild(int(guild_id))
+                if guild:
+                    guild_name = guild.name
+                    logging.info(f"Found guild name: {guild_name} for ID: {guild_id}")
+            except Exception as e:
+                logging.error(f"Error retrieving guild name for ID {guild_id}: {e}")
+
+            embed.add_field(
+                name=guild_name,
+                value=f"Records: {count}\nLatest: {latest}",
+                inline=True
+            )
+        
+        await ctx.send(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     """Setup function to add the cog to the bot."""

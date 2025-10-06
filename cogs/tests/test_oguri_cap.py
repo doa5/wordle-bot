@@ -12,6 +12,7 @@ def cog(bot):
     return OguriCapCog(bot)
 
 def test_get_random_gif_valid_category(cog):
+    """Test getting a random GIF from a valid category."""
     category = 'eating'
     gifs = cog.gifs[category]
     # Patch random.choice to always return the first gif
@@ -20,6 +21,7 @@ def test_get_random_gif_valid_category(cog):
         assert result == gifs[0]
 
 def test_get_random_gif_invalid_category(cog):
+    """Test getting a random GIF from an invalid category."""
     assert cog.get_random_gif('unknown') is None
 
 def test_get_random_gif_empty_category(cog):
@@ -28,6 +30,7 @@ def test_get_random_gif_empty_category(cog):
 
 @pytest.mark.asyncio
 async def test_on_message_triggers_response(cog, bot):
+    """Test that on_message triggers a response when 'food' is mentioned."""
     message = mock.Mock()
     message.author = mock.Mock()
     bot.user = mock.Mock()
@@ -42,6 +45,7 @@ async def test_on_message_triggers_response(cog, bot):
 
 @pytest.mark.asyncio
 async def test_on_message_ignores_bot(cog, bot):
+    """Test that on_message ignores messages from the bot itself."""
     message = mock.Mock()
     message.author = bot.user
     message.content = "food"
@@ -51,6 +55,7 @@ async def test_on_message_ignores_bot(cog, bot):
 
 @pytest.mark.asyncio
 async def test_snack_command_sends_embed(cog):
+    """Test the snack command sends an embed with a gif and satisfaction message."""
     ctx = mock.AsyncMock()
     # Patch random.choice for gif and satisfaction
     with mock.patch('random.choice', side_effect=[
@@ -73,6 +78,7 @@ async def test_snack_command_sends_embed(cog):
 
 @pytest.mark.asyncio
 async def test_celebrate_victory_command_sends_embed(cog):
+    """Test the celebrate_victory command sends an embed with a victory gif."""
     ctx = mock.AsyncMock()
     with mock.patch('random.choice', return_value=cog.gifs['victory'][0]):
         await cog.celebrate_victory.callback(cog, ctx)
