@@ -42,14 +42,18 @@ class DatabaseCog(commands.Cog):
     """
     Cog to manage database connections and operations.
     """
+    MAXIMUM_LOG_QUEUE = 100
+    LOG_PROCESSOR_TIMEOUT = 5.0  # seconds to wait for new log messages
+    LOG_SEND_DELAY = 1.0         # seconds between Discord messages to avoid rate limits
+    LOG_ERROR_RETRY_DELAY = 5.0  # seconds to wait after log processor errors
+    
     def __init__(self, bot: commands.Bot) -> None:
         """Initialize the DatabaseCog with bot instance."""
         self.bot = bot
         self.database_path = 'wordle_scores.db'
         self.connection = None
-        MAXIMUM_LOG_QUEUE = 100
         
-        self.log_queue = asyncio.Queue(maxsize=MAXIMUM_LOG_QUEUE)
+        self.log_queue = asyncio.Queue(maxsize=self.MAXIMUM_LOG_QUEUE)
         self.log_channel_id = None
         self.discord_handler = DiscordLogHandler(self)
         self.log_processor_task = None
@@ -191,20 +195,20 @@ class DatabaseCog(commands.Cog):
         try:
             while not self.bot.is_closed():
                 try:
-                    message = await asyncio.wait_for(self.log_queue.get(), timeout=5.0)
+                    message = await asyncio.wait_for(self.log_queue.get(), timeout=self.LOG_PROCESSOR_TIMEOUT)
                     
                     if self.log_channel_id:
                         channel = self.bot.get_channel(self.log_channel_id)
                         if channel:
                             await channel.send(message)
                     
-                    await asyncio.sleep(1.0)
+                    await asyncio.sleep(self.LOG_SEND_DELAY)
                     
                 except asyncio.TimeoutError:
                     continue
                 except Exception as e:
                     print(f"Error in log processor: {e}")
-                    await asyncio.sleep(5.0)
+                    await asyncio.sleep(self.LOG_ERROR_RETRY_DELAY)
         except asyncio.CancelledError:
             pass
 
