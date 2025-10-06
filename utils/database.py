@@ -3,7 +3,6 @@ from discord.ext import commands
 import logging
 import sqlite3
 import asyncio
-from datetime import datetime
 
 class DiscordLogHandler(logging.Handler):
     """Custom logging handler that sends terminal logs to Discord"""
