@@ -14,6 +14,14 @@ def mock_bot():
     """Create a mock Discord bot for testing."""
     bot = mock.AsyncMock()
     bot.get_guild = mock.Mock(return_value=None)
+    
+    mock_loop = mock.Mock()
+    mock_task = mock.Mock()
+    mock_task.done = mock.Mock(return_value=False)
+    mock_task.cancel = mock.Mock()
+    mock_loop.create_task = mock.Mock(return_value=mock_task)
+    bot.loop = mock_loop
+    bot.is_closed = mock.Mock(return_value=False)
     return bot
 
 

@@ -54,8 +54,9 @@ class DatabaseCog(commands.Cog):
         self.discord_handler = DiscordLogHandler(self)
         self.log_processor_task = None
         
-        # Start log processor
-        self.log_processor_task = self.bot.loop.create_task(self.log_processor())
+        # Start log processor (only if bot has a loop - not in tests)
+        if hasattr(self.bot, 'loop') and hasattr(self.bot.loop, 'create_task'):
+            self.log_processor_task = self.bot.loop.create_task(self.log_processor())
         
         self.connect_to_database()
 
@@ -218,7 +219,8 @@ class DatabaseCog(commands.Cog):
             except ValueError:
                 pass  
         
-        if self.log_processor_task and not self.log_processor_task.done():
+        # Cancel log processor task
+        if self.log_processor_task and hasattr(self.log_processor_task, 'done') and not self.log_processor_task.done():
             self.log_processor_task.cancel()
             
         self.close_connection()
