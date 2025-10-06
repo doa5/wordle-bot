@@ -230,6 +230,9 @@ class DatabaseCog(commands.Cog):
 
         Args:
             ctx: The command context.
+        
+        Example:
+            woguri db_stats
         """
         logging.info("Gathering database statistics.")
         total_query = "SELECT COUNT(*) FROM wordle_scores"
@@ -258,7 +261,14 @@ class DatabaseCog(commands.Cog):
     @commands.command(aliases=["dbguilds"])
     @commands.is_owner() 
     async def db_guilds(self, ctx: commands.Context) -> None:
-        """List all servers using the bot."""
+        """List all servers using the bot.
+        
+        Args:
+            ctx: The command context.
+
+        Example:
+            woguri db_guilds
+        """
         query = """SELECT guild_id, COUNT(*) as records, 
                         MAX(date) as latest_date
                 FROM wordle_scores 
@@ -296,7 +306,15 @@ class DatabaseCog(commands.Cog):
     @commands.command(aliases=["enable_terminal_logs"])
     @commands.is_owner()
     async def enable_terminal_logs(self, ctx: commands.Context, channel: discord.TextChannel = None) -> None:
-        """Enable capturing terminal logs to Discord"""
+        """Enable capturing terminal logs to Discord
+        Args:
+            ctx: The command context.
+            channel: Optional Discord text channel to send logs to. Defaults to current channel.
+        
+        Example:
+            woguri enable_terminal_logs # uses current channel
+            woguri enable_terminal_logs #general # uses #general channel
+        """
         if channel is None:
             channel = ctx.channel
         
@@ -313,7 +331,13 @@ class DatabaseCog(commands.Cog):
     @commands.command(aliases=["disable_terminal_logs"])
     @commands.is_owner()
     async def disable_terminal_logs(self, ctx: commands.Context) -> None:
-        """Disable terminal log capture"""
+        """Disable terminal log capture
+        Args:
+            ctx: The command context.
+
+        Example:
+            woguri disable_terminal_logs
+        """
         root_logger = logging.getLogger()
         try:
             root_logger.removeHandler(self.discord_handler)
