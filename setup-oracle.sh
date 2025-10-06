@@ -1,9 +1,9 @@
 #!/bin/bash
-
+# * Generated with assistance from Copilot AI, I dont know much about Oracle Cloud
 # Oracle Cloud VM Setup Script for Wordle Bot
 # Run this script after creating your VM
 
-echo "🚀 Setting up Wordle Bot on Oracle Cloud VM..."
+echo "Setting up Wordle Bot on Oracle Cloud VM..."
 
 # Update system
 sudo apt update && sudo apt upgrade -y
@@ -32,14 +32,14 @@ DISCORD_TOKEN=your_discord_bot_token_here
 WORDLE_BOT_ID=your_wordle_bot_id_here
 EOF
 
-echo "⚠️  IMPORTANT: Edit /home/ubuntu/wordle-bot/.env with your actual Discord tokens!"
+echo "IMPORTANT: Edit /home/ubuntu/wordle-bot/.env with your actual Discord tokens!"
 
 # Set up systemd service
 sudo cp wordle-bot.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable wordle-bot
 
-echo "✅ Setup complete!"
+echo "Setup complete!"
 echo ""
 echo "Next steps:"
 echo "1. Edit /home/ubuntu/wordle-bot/.env with your Discord tokens"
