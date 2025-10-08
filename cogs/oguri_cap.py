@@ -60,8 +60,6 @@ class OguriCapCog(commands.Cog):
         await ctx.send(embed=embed)
         await asyncio.sleep(3)
 
-
-    @commands.command()
     async def celebrate_victory(self, ctx):
         """Celebrate a victory with Oguri Cap"""
 
@@ -76,6 +74,36 @@ class OguriCapCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(aliases=["allcommands", "commands", "cmds"])
+    async def show_all_commands(self, ctx):
+        """List all commands available across all cogs"""
+        all_commands = {}
+        
+        # Get commands from all cogs
+        for cog_name, cog in self.bot.cogs.items():
+            cog_commands = [command.name for command in cog.get_commands()]
+            if cog_commands:
+                all_commands[cog_name] = cog_commands
+        
+        # Format the output
+        if not all_commands:
+            await ctx.send("No commands found. Something is very wrong.")
+            return
+        
+        embed = discord.Embed(
+            title="All Available Commands",
+            description="Complete command list across all systems",
+            color=0x4d79ff
+        )
+        
+        for cog_name, commands_list in all_commands.items():
+            embed.add_field(
+                name=f"{cog_name}",
+                value=", ".join(commands_list),
+                inline=False
+            )
+        
+        await ctx.send(embed=embed)
   
 async def setup(bot):
     """Setup function to add OguriCapCog to the bot"""
