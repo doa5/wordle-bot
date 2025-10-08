@@ -97,7 +97,7 @@ class UtilityCog(commands.Cog):
             pass  
         
         database_cog.log_channel_id = None
-        await ctx.message.add_reaction("❌")
+        await ctx.message.add_reaction("✅")
         await ctx.send("Terminal log capture disabled. Why would you turn off something so useful?")
         logging.info("Terminal logging to Discord disabled")
 
