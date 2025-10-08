@@ -5,7 +5,7 @@ Test script to verify duplicate management functionality.
 
 import asyncio
 import sqlite3
-from utils.database import DatabaseCog
+from cogs.database import DatabaseCog
 from unittest.mock import Mock
 
 async def test_duplicate_functions():

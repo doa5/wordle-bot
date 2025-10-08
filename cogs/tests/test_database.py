@@ -29,7 +29,7 @@ sys.modules['discord.ext.commands'] = mock_commands
 # Now import discord and our module
 import discord
 from discord.ext import commands
-from utils.database import DatabaseCog
+from cogs.database import DatabaseCog
 
 
 @pytest.fixture

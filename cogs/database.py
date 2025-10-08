@@ -350,52 +350,6 @@ class DatabaseCog(commands.Cog):
         
         await ctx.send(embed=embed)
 
-    @commands.command()
-    @commands.is_owner()
-    async def enable_terminal_logs(self, ctx: commands.Context, channel: discord.TextChannel = None) -> None:
-        """Enable capturing terminal logs to Discord
-        Args:
-            ctx: The command context.
-            channel: Optional Discord text channel to send logs to. Defaults to current channel.
-        
-        Example:
-            woguri enable_terminal_logs # uses current channel
-            woguri enable_terminal_logs #general # uses #general channel
-        """
-        if channel is None:
-            channel = ctx.channel
-        
-        self.log_channel_id = channel.id
-        
-        root_logger = logging.getLogger()
-        if self.discord_handler not in root_logger.handlers:
-            root_logger.addHandler(self.discord_handler)
-        
-        await ctx.message.add_reaction("✅")
-        await ctx.send(f"Terminal logs now being sent to {channel.mention}, good job.")
-        logging.info("Terminal logging to Discord enabled")
-
-    @commands.command()
-    @commands.is_owner()
-    async def disable_terminal_logs(self, ctx: commands.Context) -> None:
-        """Disable terminal log capture
-        Args:
-            ctx: The command context.
-
-        Example:
-            woguri disable_terminal_logs
-        """
-        root_logger = logging.getLogger()
-        try:
-            root_logger.removeHandler(self.discord_handler)
-        except ValueError:
-            pass  
-        
-        self.log_channel_id = None
-        await ctx.message.add_reaction("❌")
-        await ctx.send("Terminal log capture disabled. Why would you turn off something so useful?")
-        logging.info("Terminal logging to Discord disabled")
-
     @commands.command(aliases=["recent", "query_scores"])
     @commands.is_owner()
     async def recent_scores(self, ctx: commands.Context, limit: int = 10, date: str = None, user: discord.Member = None) -> None:

@@ -232,10 +232,16 @@ class WordleParser(commands.Cog):
                 
                 user_match = re.match(self.USER_MENTION_PATTERN, token)
                 if user_match and current_score:
-                    user_id = int(user_match.group(1))
+                    user_id = user_match.group(1)  # Keep as string like automatic parser
+                    member_id = int(user_id)  # Convert for get_member()
                     score_value = 8 if current_score == 'X' else int(current_score)
                     
-                    user = ctx.guild.get_member(user_id)
+                    # Validate score is within acceptable range
+                    if score_value not in self.VALID_SCORES:
+                        errors.append(f"Invalid score {current_score} - must be 1-6 or X")
+                        continue
+                    
+                    user = ctx.guild.get_member(member_id)
                     username = user.display_name if user else f"Unknown_{user_id}"
                     
                     if database_cog.has_duplicate_submission(user_id, ctx.guild.id, date):
@@ -254,7 +260,9 @@ class WordleParser(commands.Cog):
             # Extract all user mentions
             user_mentions = re.findall(r'<@!?(\d+)>', score_data)
             
-            score_match = re.search(r'(\d|X)(/6)?', score_data.upper())
+            # Remove user mentions from score_data to avoid matching digits in user IDs
+            clean_score_data = re.sub(r'<@!?\d+>', '', score_data).strip()
+            score_match = re.search(r'(\d|X)(/6)?', clean_score_data.upper())
             if not score_match:
                 await ctx.message.add_reaction("❌")
                 await ctx.send("That score format makes no sense. I expect clear, precise reporting. Use 3/6, X/6, 3, or X.")
@@ -273,8 +281,9 @@ class WordleParser(commands.Cog):
                 logging.info("No user mentions found, defaulting to command author")
             
             for user_id_str in user_mentions:
-                user_id = int(user_id_str)
-                user = ctx.guild.get_member(user_id)
+                user_id = user_id_str  # Keep as string like automatic parser
+                member_id = int(user_id)  # Convert for get_member()
+                user = ctx.guild.get_member(member_id)
                 username = user.display_name if user else f"Unknown_{user_id}"
                 
                 if database_cog.has_duplicate_submission(user_id, ctx.guild.id, date):
@@ -353,10 +362,16 @@ class WordleParser(commands.Cog):
                 
                 user_match = re.match(self.USER_MENTION_PATTERN, token)
                 if user_match and current_score:
-                    user_id = int(user_match.group(1))
+                    user_id = user_match.group(1)  # Keep as string like automatic parser
+                    member_id = int(user_id)  # Convert for get_member()
                     score_value = 8 if current_score == 'X' else int(current_score)
                     
-                    user = ctx.guild.get_member(user_id)
+                    # Validate score is within acceptable range
+                    if score_value not in self.VALID_SCORES:
+                        errors.append(f"Invalid score {current_score} - must be 1-6 or X")
+                        continue
+                    
+                    user = ctx.guild.get_member(member_id)
                     username = user.display_name if user else f"Unknown_{user_id}"
                     
                     # For overwrite, delete existing entries first to prevent duplicates
@@ -374,7 +389,9 @@ class WordleParser(commands.Cog):
             # Extract all user mentions
             user_mentions = re.findall(r'<@!?(\d+)>', score_data)
             
-            score_match = re.search(r'(\d|X)(/6)?', score_data.upper())
+            # Remove user mentions from score_data to avoid matching digits in user IDs
+            clean_score_data = re.sub(r'<@!?\d+>', '', score_data).strip()
+            score_match = re.search(r'(\d|X)(/6)?', clean_score_data.upper())
             if not score_match:
                 await ctx.message.add_reaction("❌")
                 await ctx.send("That score format makes no sense. I expect clear, precise reporting. Use 3/6, X/6, 3, or X.")
@@ -393,8 +410,9 @@ class WordleParser(commands.Cog):
                 logging.info("No user mentions found, defaulting to command author")
             
             for user_id_str in user_mentions:
-                user_id = int(user_id_str)
-                user = ctx.guild.get_member(user_id)
+                user_id = user_id_str  # Keep as string like automatic parser
+                member_id = int(user_id)  # Convert for get_member()
+                user = ctx.guild.get_member(member_id)
                 username = user.display_name if user else f"Unknown_{user_id}"
                 
                 # For overwrite, delete existing entries first to prevent duplicates
