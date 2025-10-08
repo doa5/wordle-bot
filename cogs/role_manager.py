@@ -97,6 +97,20 @@ class RoleCog(commands.Cog):
         else:
             await ctx.message.add_reaction("✅")
 
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        """Start the daily reset task when the bot is ready."""
+        if not self.daily_reset_task.is_running():
+            self.daily_reset_task.start()
+            logging.info("Daily reset task started.")
+        else:
+            logging.info("Daily reset task was already running.")
+        
+    def cog_unload(self) -> None:
+        """Clean up when cog is unloaded."""
+        self.daily_reset_task.cancel()
+        logging.info("Daily reset task cancelled.")
+
     @tasks.loop(time=time(0, 0))
     async def daily_reset_task(self) -> None:
         """
@@ -116,6 +130,18 @@ class RoleCog(commands.Cog):
             total_removed += removed
 
         logging.info(f"Daily reset completed! Removed roles from {total_removed} users.")
+
+    @commands.command(aliases=["resetcheck"])
+    @commands.is_owner()
+    async def reset_status(self, ctx) -> None:
+        """Check if daily reset task is running."""
+        if self.daily_reset_task.is_running():
+            next_run = self.daily_reset_task.next_iteration
+            await ctx.message.add_reaction("✅")
+            await ctx.send(f"Daily reset task is running. Next run: {next_run}")
+        else:
+            await ctx.message.add_reaction("❌")
+            await ctx.send("Daily reset task is not running.")
 
     @commands.command()
     @commands.is_owner()

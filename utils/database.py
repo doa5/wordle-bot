@@ -3,6 +3,7 @@ from discord.ext import commands
 import logging
 import sqlite3
 import asyncio
+import datetime
 
 class DiscordLogHandler(logging.Handler):
     """Custom logging handler that sends terminal logs to Discord"""
@@ -358,8 +359,131 @@ class DatabaseCog(commands.Cog):
         
         self.log_channel_id = None
         await ctx.message.add_reaction("❌")
-        await ctx.send("Terminal log capture disabled. Seriously?")
+        await ctx.send("Terminal log capture disabled. Why would you turn off something so useful?")
         logging.info("Terminal logging to Discord disabled")
+
+    @commands.command(aliases=["recent", "query_scores"])
+    @commands.is_owner()
+    async def recent_scores(self, ctx: commands.Context, limit: int = 10, date: str = None, user: discord.Member = None) -> None:
+        """Show database entries with flexible filtering
+        
+        Args:
+            ctx: The command context
+            limit: Number of entries to show (default: 10, max: 50)
+            date: Specific date to filter (YYYY-MM-DD format, optional)
+            user: Specific user to filter (mention or ID, optional)
+        
+        Examples:
+            woguri recent_scores                           # Last 10 entries
+            woguri recent_scores 25                        # Last 25 entries
+            woguri recent_scores 10 2024-10-08            # 10 entries from Oct 8th
+            woguri recent_scores 5 2024-10-08 @username   # 5 entries from Oct 8th for specific user
+            woguri recent_scores 20 None @username         # 20 entries for specific user (any date)
+        """
+   
+        if limit > 50:
+            limit = 50
+            await ctx.send("Limit capped at 50 entries. You're being a bit greedy, don't you think?")
+
+        
+        try:
+            cursor = self.connection.cursor()
+            
+            # Build query based on filters
+            base_query = "SELECT username, score, date, guild_id, user_id FROM wordle_scores"
+            conditions = []
+            params = []
+            
+            # Add date filter if provided
+            if date and date.lower() != "none":
+                try:
+                    # Validate date format
+                    datetime.strptime(date, '%Y-%m-%d')
+                    conditions.append("date = ?")
+                    params.append(date)
+                except ValueError:
+                    await ctx.message.add_reaction("❌")
+                    await ctx.send("That’s not a valid date. Use YYYY-MM-DD, please. It’s not that hard.")
+                    return
+            
+            # Add user filter if provided
+            if user:
+                conditions.append("user_id = ?")
+                params.append(str(user.id))
+            
+     
+            if conditions:
+                query = f"{base_query} WHERE {' AND '.join(conditions)}"
+            else:
+                query = base_query
+            
+            query += " ORDER BY date DESC, username LIMIT ?"
+            params.append(limit)
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            if not results:
+                filter_desc = []
+                if date and date.lower() != "none":
+                    filter_desc.append(f"date {date}")
+                if user:
+                    filter_desc.append(f"user {user.display_name}")
+                
+                filter_text = f" matching {', '.join(filter_desc)}" if filter_desc else ""
+                await ctx.message.add_reaction("❌")
+                await ctx.send(f"No results found {filter_text}. Try again if you want.")
+                return
+            
+            
+            output = "```\n"
+            
+        
+            header_parts = [f"Showing {len(results)} entries"]
+            if date and date.lower() != "none":
+                header_parts.append(f"for {date}")
+            if user:
+                header_parts.append(f"for {user.display_name}")
+            
+            output += f"{' '.join(header_parts)}\n"
+            output += "=" * 60 + "\n"
+            output += f"{'Username':<15} {'Score':<5} {'Date':<12} {'Guild':<10} {'UserID':<10}\n"
+            output += "-" * 60 + "\n"
+            
+            for username, score, date, guild_id, user_id in results:
+                # Truncate long names/IDs for display
+                username_display = username[:14] if username else "Unknown"
+                guild_display = str(guild_id)[:8] if guild_id else "Unknown"
+                user_display = str(user_id)[:8] if user_id else "Unknown"
+                
+                output += f"{username_display:<15} {score:<5} {date:<12} {guild_display:<10} {user_display:<10}\n"
+            
+            output += "```"
+            
+            # Split into multiple messages if too long (Discord 2000 char limit)
+            if len(output) > 1900:
+                lines = output.split('\n')
+                current_message = "```\n"
+                
+                for i, line in enumerate(lines):
+                    if len(current_message + line + "\n```") > 1900:
+                        current_message += "```"
+                        await ctx.send(current_message)
+                        current_message = "```\n" + line + "\n"
+                    else:
+                        current_message += line + "\n"
+                
+                if current_message != "```\n":
+                    current_message += "```"
+                    await ctx.send(current_message)
+            else:
+                await ctx.send(output)
+                
+        except Exception as e:
+            logging.error(f"Error fetching recent scores: {e}")
+            await ctx.message.add_reaction("❌")
+            await ctx.send("Something went wrong with your request. Probably your input.")
+            
 
 async def setup(bot: commands.Bot) -> None:
     """Setup function to add the cog to the bot."""
