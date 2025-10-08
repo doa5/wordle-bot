@@ -7,26 +7,7 @@ import sys
 import types
 import asyncio
 
-# Create properly mocked discord modules
-mock_discord = types.ModuleType('discord')
-mock_discord.Embed = mock.MagicMock
-mock_discord.ext = types.ModuleType('discord.ext')
-
-mock_commands = types.ModuleType('discord.ext.commands')
-mock_cog_class = mock.MagicMock()
-mock_cog_class.listener = mock.MagicMock()
-mock_commands.Cog = mock_cog_class
-mock_commands.Bot = mock.MagicMock
-mock_commands.Context = mock.MagicMock
-mock_commands.command = mock.MagicMock()
-mock_commands.is_owner = mock.MagicMock()
-
-# Assign to sys.modules
-sys.modules['discord'] = mock_discord
-sys.modules['discord.ext'] = mock_discord.ext
-sys.modules['discord.ext.commands'] = mock_commands
-
-# Now import discord and our module
+# Import the real modules
 import discord
 from discord.ext import commands
 from cogs.database import DatabaseCog
@@ -44,22 +25,33 @@ def mock_bot():
     return bot
 
 @pytest.fixture
-def db_cog(mock_bot):
+def db_cog():
     """Create a DatabaseCog with temporary database for testing. """
     temp_dir = tempfile.mkdtemp()
     temp_db_path = os.path.join(temp_dir, "test_wordle_scores.db")
     
+    # Create a real DatabaseCog instance with a mock bot
+    mock_bot = mock.Mock(spec=commands.Bot)
+    
     cog = DatabaseCog(mock_bot)
+    
     cog.database_path = temp_db_path
     cog.connection = sqlite3.connect(cog.database_path)
     cog.create_tables()
     
     yield cog
     
-    cog.close_connection()
+    if hasattr(cog, 'connection') and cog.connection:
+        cog.connection.close()
     if os.path.exists(temp_db_path):
-        os.remove(temp_db_path)
-    os.rmdir(temp_dir)
+        try:
+            os.remove(temp_db_path)
+        except PermissionError:
+            pass  # Ignore permission errors during cleanup
+    try:
+        os.rmdir(temp_dir)
+    except OSError:
+        pass  # Directory might not be empty
 
 def test_create_tables_creates_table(db_cog):
     """Test that the wordle_scores table is created properly."""

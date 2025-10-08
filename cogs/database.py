@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from typing import Optional
 import logging
 import sqlite3
 import asyncio
@@ -352,7 +353,7 @@ class DatabaseCog(commands.Cog):
 
     @commands.command(aliases=["recent", "query_scores"])
     @commands.is_owner()
-    async def recent_scores(self, ctx: commands.Context, limit: int = 10, date: str = None, user: discord.Member = None) -> None:
+    async def recent_scores(self, ctx: commands.Context, limit: int = 10, date: str = None, user = None) -> None:
         """Show database entries with flexible filtering
         
         Usage:

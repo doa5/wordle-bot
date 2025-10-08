@@ -1,7 +1,13 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import logging
 from datetime import time
+
+try:
+    from discord.ext import tasks
+except ImportError:
+    # Handle case where tasks might not be available in test environment
+    tasks = None
 
 class RoleCog(commands.Cog):
     """
@@ -41,7 +47,7 @@ class RoleCog(commands.Cog):
             await ctx.message.add_reaction("❌")
             logging.warning(f"Role '{self.role_name}' not found in guild {ctx.guild.name}")
 
-    async def _remove_done_roles(self, guild: discord.Guild, notify_channel: discord.TextChannel = None) -> int:
+    async def _remove_done_roles(self, guild, notify_channel = None) -> int:
         """
         Helper method to remove 'done' roles from all members.
         
@@ -111,7 +117,7 @@ class RoleCog(commands.Cog):
         self.daily_reset_task.cancel()
         logging.info("Daily reset task cancelled.")
 
-    @tasks.loop(time=time(0, 0))
+    @tasks.loop(time=time(0, 0)) if tasks else lambda func: func
     async def daily_reset_task(self) -> None:
         """
         Automatically reset 'done' roles at midnight

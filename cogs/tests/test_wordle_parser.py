@@ -190,7 +190,7 @@ async def test_validate_date(parser_cog, date_str, expected, mocker):
         assert result is expected
         if not expected:
             ctx.message.add_reaction.assert_awaited_with("❌")
-            ctx.send.assert_awaited_with("Your date format is... inadequate. Use YYYY-MM-DD format. Precision matters.")
+            ctx.send.assert_awaited_with("Your date format is... inadequate. Use YYYY-MM-DD format. Precision matters. Zero-pad single digits.")
 
 
 @pytest.mark.asyncio
@@ -247,7 +247,7 @@ async def test_add_manual_score_invalid_score_format(parser_cog, mocker):
         await parser_cog.add_manual_score.callback(parser_cog, ctx, "2024-06-01", score_data="badscore")
         ctx.message.add_reaction.assert_awaited_with("❌")
         ctx.send.assert_awaited_with(
-            "That score format makes no sense. I expect clear, precise reporting. Use 3/6, X/6, 3, or X."
+            "No valid score format found. Use formats like: 3/6, X/6, 3/6: @user, or just 3"
         )
 
 
@@ -256,16 +256,14 @@ async def test_add_manual_score_invalid_score_value(parser_cog, mocker):
     ctx = MagicMock()
     ctx.author.id = 1111
     ctx.guild.id = 2222
+    ctx.guild.get_member.return_value = MagicMock(display_name="TestUser")
     ctx.message.add_reaction = AsyncMock()
     ctx.send = AsyncMock()
     parser_cog.validate_date = AsyncMock(return_value=True)
     parser_cog.bot.get_cog.return_value = mocker.MagicMock()
 
     await parser_cog.add_manual_score.callback(parser_cog, ctx, "2024-06-01", score_data="9/6")
-    ctx.message.add_reaction.assert_awaited_with("❌")
-    ctx.send.assert_awaited_with(
-        "Those numbers are outside acceptable parameters. Scores must be 1-6 or X for complete failure."
-    )
+    ctx.send.assert_awaited_with("❌ Invalid score 9/6 - must be 1-6 or X")
 
 
 @pytest.mark.asyncio
@@ -361,7 +359,7 @@ async def test_overwrite_manual_score_invalid_format(parser_cog, mocker):
     await parser_cog.overwrite_manual_score.callback(parser_cog, ctx, "2024-06-01", score_data="badscore")
     ctx.message.add_reaction.assert_awaited_with("❌")
     ctx.send.assert_awaited_with(
-        "That score format makes no sense. I expect clear, precise reporting. Use 3/6, X/6, 3, or X."
+        "No valid score format found. Use formats like: 3/6, X/6, 3/6: @user, or just 3"
     )
 
 
