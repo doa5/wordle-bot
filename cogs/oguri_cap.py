@@ -83,8 +83,8 @@ class OguriCapCog(commands.Cog):
         await ctx.send(embed=embed)
         logging.info(f"Snack time initiated by {ctx.author}")
 
-    @commands.is_owner()
     @commands.command()
+    @commands.is_owner()
     async def say(self, ctx: commands.Context, *, message: str) -> None:
         """Makes Oguri Cap deliver your message to general.
         
@@ -109,6 +109,7 @@ class OguriCapCog(commands.Cog):
             logging.warning("❌ No #general channel found. Message not sent.")
 
     @commands.command(name="announce")
+    @commands.is_owner()
     async def announce(self, ctx: commands.Context, *, message: str) -> None:
         """Official Oguri Cap announcement (text only). Announcements go to #general channel.
 
@@ -139,6 +140,7 @@ class OguriCapCog(commands.Cog):
             logging.warning("❌ No #general channel found. Message not sent.")
 
     @commands.command(name="announcewithgif")
+    @commands.is_owner()
     async def announce_with_gif(self, ctx: commands.Context, gif_url: str, *, message: str) -> None:
         """Official Oguri Cap announcement with GIF.
         
@@ -146,7 +148,7 @@ class OguriCapCog(commands.Cog):
             gif_url: URL of the GIF to include in the announcement.
             message: The announcement text to send.
         Usage:
-            woguri annonce https://gif-url.com/gif.gif Your message here
+            woguri announcewithgif https://gif-url.com/gif.gif Your message here
         """
         try:
             await ctx.message.delete()
