@@ -565,37 +565,6 @@ class DatabaseCog(commands.Cog):
             await ctx.message.add_reaction("❌")
             await ctx.send("Error cleaning duplicates. Something went terribly wrong.")
 
-    def has_duplicate_submission(self, user_id: int, guild_id: int, date: str) -> bool:
-        """Check if a user already has a submission for the given date in the guild.
-        
-        Args:
-            user_id: Discord user ID
-            guild_id: Discord guild ID  
-            date: Date string in YYYY-MM-DD format
-            
-        Returns:
-            True if duplicate exists, False otherwise
-        """
-        try:
-            if not self.connection:
-                logging.error("No database connection.")
-                return False  # On error, allow submission rather than block it
-                
-            cursor = self.connection.cursor()
-            
-            cursor.execute("""
-                SELECT COUNT(*) FROM wordle_scores 
-                WHERE user_id = ? AND guild_id = ? AND date = ?
-            """, (user_id, guild_id, date))
-            
-            count = cursor.fetchone()[0]
-            
-            return count > 0
-            
-        except Exception as e:
-            logging.error(f"Error checking for duplicate submission: {e}")
-            return False  # On error, allow submission rather than block it
-
 async def setup(bot: commands.Bot) -> None:
     """Setup function to add the cog to the bot."""
     await bot.add_cog(DatabaseCog(bot))
