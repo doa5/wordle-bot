@@ -1,13 +1,7 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import logging
 from datetime import time
-
-try:
-    from discord.ext import tasks
-except ImportError:
-    # Handle case where tasks might not be available in test environment
-    tasks = None
 
 class RoleCog(commands.Cog):
     """
@@ -117,16 +111,12 @@ class RoleCog(commands.Cog):
         self.daily_reset_task.cancel()
         logging.info("Daily reset task cancelled.")
 
-    @tasks.loop(time=time(0, 0)) if tasks else lambda func: func
+    @tasks.loop(time=time(0, 0))
     async def daily_reset_task(self) -> None:
         """
-        Automatically reset 'done' roles at midnight
+        Reset 'done' roles across all guilds at midnight.
         
-        Args:
-            None - runs automatically at midnight daily
-        
-        Note:
-            Requires appropriate permissions to manage roles.
+        This task runs automatically every day at midnight.
         """
         total_removed = 0
         for guild in self.bot.guilds:
