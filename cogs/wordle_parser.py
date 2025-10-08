@@ -219,84 +219,94 @@ class WordleParser(commands.Cog):
         saved_count = 0
         errors = []
         
-        # Parse Wordle bot format (multiple scores with users)
-        if re.search(self.WORDLE_SCORE_PATTERN, score_data):
-            lines = score_data.split()
-            current_score = None
-            
-            for token in lines:
-                score_match = re.match(self.SCORE_MATCH_PATTERN, token.upper())
-                if score_match:
-                    current_score = score_match.group(1)
-                    continue
+        # Use the same parsing logic as the automatic parser - much more reliable!
+        lines = score_data.split('\n')
+        for line in lines:
+            if '/6:' in line or '/6' in line:
+                # Extract score and users from each line (including X/6 for failures)
+                score_match = re.search(self.PARSE_SCORE_PATTERN, line)
+                if not score_match:
+                    # Try without colon for simple format like "5/6 @user"
+                    score_match = re.search(r'(\d|X)/6', line.upper())
                 
-                user_match = re.match(self.USER_MENTION_PATTERN, token)
-                if user_match and current_score:
-                    user_id = user_match.group(1)  # Keep as string like automatic parser
-                    member_id = int(user_id)  # Convert for get_member()
-                    score_value = 8 if current_score == 'X' else int(current_score)
+                if score_match:
+                    score_str = score_match.group(1)
+                    score_value = 8 if score_str == 'X' else int(score_str)
                     
                     # Validate score is within acceptable range
                     if score_value not in self.VALID_SCORES:
-                        errors.append(f"Invalid score {current_score} - must be 1-6 or X")
+                        errors.append(f"Invalid score {score_str}/6 - must be 1-6 or X")
                         continue
                     
-                    user = ctx.guild.get_member(member_id)
-                    username = user.display_name if user else f"Unknown_{user_id}"
+                    # Extract mentioned users (@ mentions)
+                    user_mentions = re.findall(self.PARSE_USER_PATTERN, line)
                     
-                    if database_cog.has_duplicate_submission(user_id, ctx.guild.id, date):
-                        errors.append(f"{username} already has a score for {date}")
+                    if not user_mentions:
+                        # No mentions found, default to command author
+                        user_mentions = [str(ctx.author.id)]
+                        logging.info("No user mentions found, defaulting to command author")
+                    
+                    for user_id in user_mentions:
+                        member_id = int(user_id)
+                        user = ctx.guild.get_member(member_id)
+                        username = user.display_name if user else f"Unknown_{user_id}"
+                        
+                        if database_cog.has_duplicate_submission(user_id, ctx.guild.id, date):
+                            errors.append(f"{username} already has a score for {date}")
+                            logging.info(f"Duplicate score submission detected for {username} on {date}")
+                            continue
+                        
+                        success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
+                        if success:
+                            saved_count += 1
+                            logging.info(f"Manual score added: {username} ({user_id}) = {score_value} points on {date}")
+                        else:
+                            errors.append(f"Failed to save score for {username}")
+            else:
+                # Handle lines without /6 format - look for standalone scores
+                # Extract all user mentions first
+                user_mentions = re.findall(self.PARSE_USER_PATTERN, line)
+                
+                # Look for standalone score (just a number or X)
+                clean_line = re.sub(r'<@!?\d+>', '', line).strip()
+                score_match = re.search(r'\b(\d|X)\b', clean_line.upper())
+                
+                if score_match:
+                    score_str = score_match.group(1)
+                    score_value = 8 if score_str == 'X' else int(score_str)
+                    
+                    # Validate score is within acceptable range
+                    if score_value not in self.VALID_SCORES:
+                        errors.append(f"Invalid score {score_str} - must be 1-6 or X")
                         continue
                     
-                    success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
-                    if success:
-                        saved_count += 1
-                        logging.info(f"Manual score added: {username} ({user_id}) = {score_value} points on {date}")
-                    else:
-                        errors.append(f"Failed to save score for {username}")
+                    if not user_mentions:
+                        # No mentions found, default to command author
+                        user_mentions = [str(ctx.author.id)]
+                        logging.info("No user mentions found, defaulting to command author")
+                    
+                    for user_id in user_mentions:
+                        member_id = int(user_id)
+                        user = ctx.guild.get_member(member_id)
+                        username = user.display_name if user else f"Unknown_{user_id}"
+                        
+                        if database_cog.has_duplicate_submission(user_id, ctx.guild.id, date):
+                            errors.append(f"{username} already has a score for {date}")
+                            logging.info(f"Duplicate score submission detected for {username} on {date}")
+                            continue
+                        
+                        success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
+                        if success:
+                            saved_count += 1
+                            logging.info(f"Manual score added: {username} ({user_id}) = {score_value} points on {date}")
+                        else:
+                            errors.append(f"Failed to save score for {username}")
         
-        else:
-            # Handle simple formats
-            # Extract all user mentions
-            user_mentions = re.findall(r'<@!?(\d+)>', score_data)
-            
-            # Remove user mentions from score_data to avoid matching digits in user IDs
-            clean_score_data = re.sub(r'<@!?\d+>', '', score_data).strip()
-            score_match = re.search(r'(\d|X)(/6)?', clean_score_data.upper())
-            if not score_match:
-                await ctx.message.add_reaction("❌")
-                await ctx.send("That score format makes no sense. I expect clear, precise reporting. Use 3/6, X/6, 3, or X.")
-                return
-            
-            score_str = score_match.group(1)
-            score_value = 8 if score_str == 'X' else int(score_str)
-            
-            if score_value not in self.VALID_SCORES:
-                await ctx.message.add_reaction("❌")
-                await ctx.send("Those numbers are outside acceptable parameters. Scores must be 1-6 or X for complete failure.")
-                return
-            
-            if not user_mentions:
-                user_mentions = [str(ctx.author.id)]
-                logging.info("No user mentions found, defaulting to command author")
-            
-            for user_id_str in user_mentions:
-                user_id = user_id_str  # Keep as string like automatic parser
-                member_id = int(user_id)  # Convert for get_member()
-                user = ctx.guild.get_member(member_id)
-                username = user.display_name if user else f"Unknown_{user_id}"
-                
-                if database_cog.has_duplicate_submission(user_id, ctx.guild.id, date):
-                    errors.append(f"{username} already has a score for {date}")
-                    logging.info(f"Duplicate score submission detected for {username} on {date}")
-                    continue
-                
-                success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
-                if success:
-                    saved_count += 1
-                    logging.info(f"Manual score added: {username} ({user_id}) = {score_value} points on {date}")
-                else:
-                    errors.append(f"Failed to save score for {username}")
+        # If no scores were processed at all, show error
+        if saved_count == 0 and not errors:
+            await ctx.message.add_reaction("❌")
+            await ctx.send("No valid score format found. Use formats like: 3/6, X/6, 3/6: @user, or just 3")
+            return
         
         if saved_count == 1:
             await ctx.message.add_reaction("✅")
@@ -349,81 +359,90 @@ class WordleParser(commands.Cog):
         saved_count = 0
         errors = []
         
-        # Parse Wordle bot format (multiple scores with users)
-        if re.search(self.WORDLE_SCORE_PATTERN, score_data):
-            lines = score_data.split()
-            current_score = None
-            
-            for token in lines:
-                score_match = re.match(self.SCORE_MATCH_PATTERN, token.upper())
-                if score_match:
-                    current_score = score_match.group(1)
-                    continue
+        # Use the same parsing logic as the automatic parser - much more reliable!
+        lines = score_data.split('\n')
+        for line in lines:
+            if '/6:' in line or '/6' in line:
+                # Extract score and users from each line (including X/6 for failures)
+                score_match = re.search(self.PARSE_SCORE_PATTERN, line)
+                if not score_match:
+                    # Try without colon for simple format like "5/6 @user"
+                    score_match = re.search(r'(\d|X)/6', line.upper())
                 
-                user_match = re.match(self.USER_MENTION_PATTERN, token)
-                if user_match and current_score:
-                    user_id = user_match.group(1)  # Keep as string like automatic parser
-                    member_id = int(user_id)  # Convert for get_member()
-                    score_value = 8 if current_score == 'X' else int(current_score)
+                if score_match:
+                    score_str = score_match.group(1)
+                    score_value = 8 if score_str == 'X' else int(score_str)
                     
                     # Validate score is within acceptable range
                     if score_value not in self.VALID_SCORES:
-                        errors.append(f"Invalid score {current_score} - must be 1-6 or X")
+                        errors.append(f"Invalid score {score_str}/6 - must be 1-6 or X")
                         continue
                     
-                    user = ctx.guild.get_member(member_id)
-                    username = user.display_name if user else f"Unknown_{user_id}"
+                    # Extract mentioned users (@ mentions)
+                    user_mentions = re.findall(self.PARSE_USER_PATTERN, line)
                     
-                    # For overwrite, delete existing entries first to prevent duplicates
-                    database_cog.delete_user_score(user_id, ctx.guild.id, date)
+                    if not user_mentions:
+                        # No mentions found, default to command author
+                        user_mentions = [str(ctx.author.id)]
+                        logging.info("No user mentions found, defaulting to command author")
                     
-                    success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
-                    if success:
-                        saved_count += 1
-                        logging.info(f"Manual score overwritten: {username} ({user_id}) = {score_value} points on {date}")
-                    else:
-                        errors.append(f"Failed to save score for {username}")
+                    for user_id in user_mentions:
+                        member_id = int(user_id)
+                        user = ctx.guild.get_member(member_id)
+                        username = user.display_name if user else f"Unknown_{user_id}"
+                        
+                        # For overwrite, delete existing entries first to prevent duplicates
+                        database_cog.delete_user_score(user_id, ctx.guild.id, date)
+                        
+                        success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
+                        if success:
+                            saved_count += 1
+                            logging.info(f"Manual score overwritten: {username} ({user_id}) = {score_value} points on {date}")
+                        else:
+                            errors.append(f"Failed to save score for {username}")
+            else:
+                # Handle lines without /6 format - look for standalone scores
+                # Extract all user mentions first
+                user_mentions = re.findall(self.PARSE_USER_PATTERN, line)
+                
+                # Look for standalone score (just a number or X)
+                clean_line = re.sub(r'<@!?\d+>', '', line).strip()
+                score_match = re.search(r'\b(\d|X)\b', clean_line.upper())
+                
+                if score_match:
+                    score_str = score_match.group(1)
+                    score_value = 8 if score_str == 'X' else int(score_str)
+                    
+                    # Validate score is within acceptable range
+                    if score_value not in self.VALID_SCORES:
+                        errors.append(f"Invalid score {score_str} - must be 1-6 or X")
+                        continue
+                    
+                    if not user_mentions:
+                        # No mentions found, default to command author
+                        user_mentions = [str(ctx.author.id)]
+                        logging.info("No user mentions found, defaulting to command author")
+                    
+                    for user_id in user_mentions:
+                        member_id = int(user_id)
+                        user = ctx.guild.get_member(member_id)
+                        username = user.display_name if user else f"Unknown_{user_id}"
+                        
+                        # For overwrite, delete existing entries first to prevent duplicates
+                        database_cog.delete_user_score(user_id, ctx.guild.id, date)
+                        
+                        success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
+                        if success:
+                            saved_count += 1
+                            logging.info(f"Manual score overwritten: {username} ({user_id}) = {score_value} points on {date}")
+                        else:
+                            errors.append(f"Failed to save score for {username}")
         
-        else:
-            # Handle simple formats
-            # Extract all user mentions
-            user_mentions = re.findall(r'<@!?(\d+)>', score_data)
-            
-            # Remove user mentions from score_data to avoid matching digits in user IDs
-            clean_score_data = re.sub(r'<@!?\d+>', '', score_data).strip()
-            score_match = re.search(r'(\d|X)(/6)?', clean_score_data.upper())
-            if not score_match:
-                await ctx.message.add_reaction("❌")
-                await ctx.send("That score format makes no sense. I expect clear, precise reporting. Use 3/6, X/6, 3, or X.")
-                return
-            
-            score_str = score_match.group(1)
-            score_value = 8 if score_str == 'X' else int(score_str)
-            
-            if score_value not in self.VALID_SCORES:
-                await ctx.message.add_reaction("❌")
-                await ctx.send("Those numbers are outside acceptable parameters. Scores must be 1-6 or X for complete failure.")
-                return
-            
-            if not user_mentions:
-                user_mentions = [str(ctx.author.id)]
-                logging.info("No user mentions found, defaulting to command author")
-            
-            for user_id_str in user_mentions:
-                user_id = user_id_str  # Keep as string like automatic parser
-                member_id = int(user_id)  # Convert for get_member()
-                user = ctx.guild.get_member(member_id)
-                username = user.display_name if user else f"Unknown_{user_id}"
-                
-                # For overwrite, delete existing entries first to prevent duplicates
-                database_cog.delete_user_score(user_id, ctx.guild.id, date)
-                
-                success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
-                if success:
-                    saved_count += 1
-                    logging.info(f"Manual score overwritten: {username} ({user_id}) = {score_value} points on {date}")
-                else:
-                    errors.append(f"Failed to save score for {username}")
+        # If no scores were processed at all, show error
+        if saved_count == 0 and not errors:
+            await ctx.message.add_reaction("❌")
+            await ctx.send("No valid score format found. Use formats like: 3/6, X/6, 3/6: @user, or just 3")
+            return
         
         if saved_count == 1:
             await ctx.message.add_reaction("✅")
