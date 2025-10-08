@@ -4,7 +4,8 @@ import logging
 import re
 import os
 from datetime import datetime
-from typing import Optional
+
+
 
 class WordleParser(commands.Cog):
     """
@@ -57,7 +58,7 @@ class WordleParser(commands.Cog):
         logging.info(f"Message {message_id} unmarked from manual processing")
 
     @commands.Cog.listener()
-    async def on_message(self, message) -> None:
+    async def on_message(self, message: discord.Message) -> None:
         """
         Listen for messages from the Wordle bot and parse scores.
         
@@ -86,7 +87,7 @@ class WordleParser(commands.Cog):
             logging.info("Simulated Wordle report detected.")
             await self.parse_wordle_results(message)
 
-    async def parse_wordle_results(self, message) -> None:
+    async def parse_wordle_results(self, message: discord.Message) -> None:
         """
         Parse Wordle bot results and extract scores
         
@@ -183,7 +184,7 @@ class WordleParser(commands.Cog):
             return False
 
     @commands.command(aliases=["add_score", "manual_score"])
-    # @commands.has_permissions(administrator=True)  # Disabled for testing
+    @commands.has_permissions(administrator=True) 
     async def add_manual_score(self, ctx: commands.Context, date: str, *, score_data: str) -> None:
         """
         Manually add Wordle scores for users on a specific date.
@@ -303,7 +304,7 @@ class WordleParser(commands.Cog):
                         else:
                             errors.append(f"Failed to save score for {username}")
         
-        # If no scores were processed at all, show error
+    
         if saved_count == 0 and not errors:
             await ctx.message.add_reaction("❌")
             await ctx.send("No valid score format found. Use formats like: 3/6, X/6, 3/6: @user, or just 3")
