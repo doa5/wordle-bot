@@ -152,13 +152,33 @@ class WordleParser(commands.Cog):
 
 
     async def validate_date(self, date: str, ctx: commands.Context) -> bool:
-        """Validate date string is in YYYY-MM-DD format."""
+        """Validate date string is in YYYY-MM-DD format with zero-padded days/months."""
+        # First check exact format length and structure
+        if len(date) != 10 or date[4] != '-' or date[7] != '-':
+            await ctx.message.add_reaction("❌")
+            await ctx.send("Your date format is... inadequate. Use YYYY-MM-DD format. Precision matters. Zero-pad single digits.")
+            return False
+            
+        # Check if all parts are digits in correct positions
+        if not (date[:4].isdigit() and date[5:7].isdigit() and date[8:10].isdigit()):
+            await ctx.message.add_reaction("❌")
+            await ctx.send("Your date format is... inadequate. Use YYYY-MM-DD format. Precision matters. Zero-pad single digits.")
+            return False
+            
         try:
-            datetime.strptime(date, '%Y-%m-%d')
+            # Verify it's a valid date
+            parsed_date = datetime.strptime(date, '%Y-%m-%d')
+            
+            # Ensure the formatted date matches input (catches invalid dates like 2025-13-01)
+            if parsed_date.strftime('%Y-%m-%d') != date:
+                await ctx.message.add_reaction("❌")
+                await ctx.send("That date doesn't exist in reality. I demand temporal accuracy.")
+                return False
+                
             return True
         except ValueError:
             await ctx.message.add_reaction("❌")
-            await ctx.send("Your date format is... inadequate. Use YYYY-MM-DD format. Precision matters.")
+            await ctx.send("Your date format is... inadequate. Use YYYY-MM-DD format. Precision matters. Zero-pad single digits.")
             return False
 
     @commands.command(aliases=["add_score", "manual_score"])
