@@ -183,7 +183,7 @@ class WordleParser(commands.Cog):
             await ctx.send("Your date format is... inadequate. Use YYYY-MM-DD format. Precision matters. Zero-pad single digits.")
             return False
 
-    @commands.command(aliases=["add_score", "manual_score"])
+    @commands.command(aliases=["addscore", "add_score", "manual_score"])
     @commands.has_permissions(administrator=True) 
     async def add_manual_score(self, ctx: commands.Context, date: str, *, score_data: str) -> None:
         """
@@ -323,7 +323,7 @@ class WordleParser(commands.Cog):
                 error_msg += f"\n... and {len(errors) - 5} more errors"
             await ctx.send(error_msg)
 
-    @commands.command(aliases=["overwrite_score", "replace_score"])
+    @commands.command(aliases=["replacescore", "replace_score", "overwrite_score"])
     @commands.is_owner()
     async def overwrite_manual_score(self, ctx: commands.Context, date: str, *, score_data: str) -> None:
         """
