@@ -4,7 +4,7 @@ Discord bot that tracks Wordle scores with an Oguri Cap personality. Automatical
 
 ## Add to your server
 
-[Invite Woguri Bot](https://discord.com/oauth2/authorize?client_id=1422909283451932803&permissions=275146730560&integration_type=0&scope=bot)
+[Invite woguri bot](https://discord.com/oauth2/authorize?client_id=1422909283451932803&permissions=275146730560&integration_type=0&scope=bot)
 
 The bot is hosted and maintained, just invite and use.
 
