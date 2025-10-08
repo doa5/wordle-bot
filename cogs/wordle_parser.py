@@ -359,7 +359,9 @@ class WordleParser(commands.Cog):
                     user = ctx.guild.get_member(user_id)
                     username = user.display_name if user else f"Unknown_{user_id}"
                     
-                    # For overwrite, we don't check for duplicates - we force overwrite
+                    # For overwrite, delete existing entries first to prevent duplicates
+                    database_cog.delete_user_score(user_id, ctx.guild.id, date)
+                    
                     success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
                     if success:
                         saved_count += 1
@@ -395,7 +397,9 @@ class WordleParser(commands.Cog):
                 user = ctx.guild.get_member(user_id)
                 username = user.display_name if user else f"Unknown_{user_id}"
                 
-                # For overwrite, we don't check for duplicates - we force overwrite
+                # For overwrite, delete existing entries first to prevent duplicates
+                database_cog.delete_user_score(user_id, ctx.guild.id, date)
+                
                 success = database_cog.save_wordle_score(user_id, ctx.guild.id, username, score_value, date)
                 if success:
                     saved_count += 1

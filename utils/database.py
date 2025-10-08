@@ -191,6 +191,40 @@ class DatabaseCog(commands.Cog):
         logging.info(f"Duplicate submission check result: {bool(result)}")
         return bool(result)
 
+    def delete_user_score(self, user_id: int, guild_id: int, date: str) -> bool:
+        """Delete existing score for a user on a specific date in a guild.
+        
+        Args:
+            user_id: Discord user ID
+            guild_id: Discord guild ID
+            date: Date string in YYYY-MM-DD format
+            
+        Returns:
+            True if deletion was successful, False otherwise
+        """
+        try:
+            if not self.connection:
+                logging.error("No database connection.")
+                return False
+                
+            cursor = self.connection.cursor()
+            cursor.execute("""
+                DELETE FROM wordle_scores 
+                WHERE user_id = ? AND guild_id = ? AND date = ?
+            """, (user_id, guild_id, date))
+            
+            deleted_count = cursor.rowcount
+            self.connection.commit()
+            
+            if deleted_count > 0:
+                logging.info(f"Deleted {deleted_count} existing scores for user {user_id} on {date}")
+            
+            return True
+            
+        except Exception as e:
+            logging.error(f"Error deleting user score: {e}")
+            return False
+
     async def log_processor(self) -> None:
         """Background task to process log messages and send them to Discord channel."""
         try:
