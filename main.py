@@ -84,7 +84,7 @@ async def setup_error_handlers(bot: commands.Bot) -> None:
             
         else:
             logging.error(f"Unexpected error in command {ctx.command}: {error}", exc_info=True)
-            await ctx.send("An error occurred. I’ll keep running.", delete_after=5)
+            await ctx.send("An error occurred. I’ll keep running.", delete_after=10)
 
 async def load_cogs(bot: commands.Bot) -> None:
     """Load all cog extensions."""

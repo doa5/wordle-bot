@@ -3,7 +3,7 @@ from discord.ext import commands
 import logging
 import sqlite3
 import asyncio
-import datetime
+from datetime import datetime, timedelta
 
 class DiscordLogHandler(logging.Handler):
     """Custom logging handler that sends terminal logs to Discord"""
@@ -364,7 +364,7 @@ class DatabaseCog(commands.Cog):
 
     @commands.command(aliases=["recent", "query_scores"])
     @commands.is_owner()
-    async def recent_scores(self, ctx: commands.Context, *, args: str = None) -> None:
+    async def recent_scores(self, ctx: commands.Context, limit: int = 10, date: str = None, user: discord.Member = None) -> None:
         """Show database entries with flexible filtering
         
         Usage:
@@ -373,50 +373,11 @@ class DatabaseCog(commands.Cog):
             woguri recent_scores 10 2025-10-06            # 10 entries from specific date
             woguri recent_scores 10 2025-10-06 @user      # 10 entries from date for user
         """
-        # Default values
-        limit = 10
-        date = None
-        user = None
-        
-        # Parse arguments manually
-        if args:
-            parts = args.split()
-            
-            try:
-                # First argument might be limit
-                if parts and parts[0].isdigit():
-                    if int(parts[0]) > 50:
-                        await ctx.send(f"Limit capped at 50 entries. You're being a bit greedy, don't you think?")
-                    limit = min(int(parts[0]), 50)  
-                    parts = parts[1:]
-                
-                # Second argument might be date
-                if parts and len(parts[0]) == 10 and '-' in parts[0]:
-                    try:
-                        datetime.strptime(parts[0], '%Y-%m-%d')
-                        date = parts[0]
-                        parts = parts[1:]
-                    except ValueError:
-                        await ctx.message.add_reaction("❌")
-                        await ctx.send("That’s not a valid date. Use YYYY-MM-DD, please. It’s not that hard.")
-                        return
-                
-                # Third argument might be user mention
-                if parts and parts[0].startswith('<@'):
-                    # Extract user ID from mention
-                    user_id = parts[0].replace('<@', '').replace('>', '').replace('!', '')
-                    try:
-                        user = ctx.guild.get_member(int(user_id))
-                    except ValueError:
-                        await ctx.message.add_reaction("❌")
-                        await ctx.send("That user mention doesn't look right.")
-                        return
-                        
-            except Exception as e:
-                logging.error(f"Error parsing recent_scores arguments: {e}")
-                await ctx.message.add_reaction("❌")
-                await ctx.send("Something's wrong with your arguments. Try: `woguri recent 10 2025-10-06`")
-                return
+        # Validate and cap the limit
+        if limit > 50:
+            limit = 50
+            await ctx.add_reaction("⚠️")
+            await ctx.send("Limit capped at 50 entries. You're being a bit greedy, don't you think?")
         
         try:
             cursor = self.connection.cursor()
@@ -427,9 +388,15 @@ class DatabaseCog(commands.Cog):
             params = []
             
             # Add date filter if provided
-            if date:
-                conditions.append("date = ?")
-                params.append(date)
+            if date and date.lower() != "none":
+                try:
+                    # Validate date format
+                    datetime.strptime(date, '%Y-%m-%d')
+                    conditions.append("date = ?")
+                    params.append(date)
+                except ValueError:
+                    await ctx.send("That’s not a valid date. Use YYYY-MM-DD, please. It’s not that hard.")
+                    return
             
             # Add user filter if provided
             if user:
@@ -442,6 +409,7 @@ class DatabaseCog(commands.Cog):
             else:
                 query = base_query
             
+            # Add ordering and limit
             query += " ORDER BY date DESC, username LIMIT ?"
             params.append(limit)
             
@@ -451,7 +419,7 @@ class DatabaseCog(commands.Cog):
             
             if not results:
                 filter_parts = []
-                if date:
+                if date and date.lower() != "none":
                     filter_parts.append(f"date {date}")
                 if user:
                     filter_parts.append(f"user {user.display_name}")
@@ -460,10 +428,12 @@ class DatabaseCog(commands.Cog):
                 await ctx.send(f"No results found{filter_text}. Try again if you want.")
                 return
             
+            # Create formatted output
             output = "```\n"
             
+            # Add header with filter info
             header_parts = [f"Showing {len(results)} entries"]
-            if date:
+            if date and date.lower() != "none":
                 header_parts.append(f"for {date}")
             if user:
                 header_parts.append(f"for {user.display_name}")
@@ -484,8 +454,8 @@ class DatabaseCog(commands.Cog):
                 
         except Exception as e:
             logging.error(f"Error in recent_scores command: {e}")
-            await ctx.message.add_reaction("❌")
-            await ctx.send(f"Database error: {str(e)}")
+            await ctx.add_reaction("❌")
+            await ctx.send("Something went wrong with your request. Probably your input.")
 
 async def setup(bot: commands.Bot) -> None:
     """Setup function to add the cog to the bot."""
