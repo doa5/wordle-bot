@@ -376,7 +376,7 @@ class DatabaseCog(commands.Cog):
         # Validate and cap the limit
         if limit > 50:
             limit = 50
-            await ctx.add_reaction("⚠️")
+            await ctx.message.add_reaction("⚠️")
             await ctx.send("Limit capped at 50 entries. You're being a bit greedy, don't you think?")
         
         try:
@@ -454,17 +454,17 @@ class DatabaseCog(commands.Cog):
                 
         except Exception as e:
             logging.error(f"Error in recent_scores command: {e}")
-            await ctx.add_reaction("❌")
+            await ctx.message.add_reaction("❌")
             await ctx.send("Something went wrong with your request. Probably your input.")
 
     @commands.command(name="show_duplicates", aliases=["duplicates", "dupes"])
     @commands.is_owner()
-    async def show_duplicates(self, ctx, guild_id: int = None):
+    async def show_duplicates(self, ctx: commands.Context, guild_id: int = None) -> None:
         """Show all duplicate submissions in the database."""
         try:
             if not self.connection:
                 logging.error("No database connection.")
-                await ctx.add_reaction("❌")
+                await ctx.message.add_reaction("❌")
                 await ctx.send("Database connection error. Very problematic.")
                 return
 
@@ -506,17 +506,17 @@ class DatabaseCog(commands.Cog):
             
         except Exception as e:
             logging.error(f"Error showing duplicates: {e}")
-            await ctx.add_reaction("❌")
+            await ctx.message.add_reaction("❌")
             await ctx.send("Error checking for duplicates. The system must be confused.")
 
     @commands.command(name="clean_duplicates", aliases=["cleanup", "dedupe"])
     @commands.is_owner()
-    async def clean_duplicates(self, ctx, guild_id: int = None):
+    async def clean_duplicates(self, ctx: commands.Context, guild_id: int = None) -> None:
         """Remove duplicate submissions, keeping the first occurrence."""
         try:
             if not self.connection:
                 logging.error("No database connection.")
-                await ctx.add_reaction("❌")
+                await ctx.message.add_reaction("❌")
                 await ctx.send("Database connection error. Very problematic.")
                 return
 
@@ -573,7 +573,7 @@ class DatabaseCog(commands.Cog):
             
         except Exception as e:
             logging.error(f"Error cleaning duplicates: {e}")
-            await ctx.add_reaction("❌")
+            await ctx.message.add_reaction("❌")
             await ctx.send("Error cleaning duplicates. Something went terribly wrong.")
 
     def has_duplicate_submission(self, user_id: int, guild_id: int, date: str) -> bool:
