@@ -6,7 +6,7 @@ from unittest import mock
 import asyncio
 
 # Import the actual modules (no mocking needed like other tests)
-from utils.database import DatabaseCog
+from cogs.database import DatabaseCog
 
 
 @pytest.fixture

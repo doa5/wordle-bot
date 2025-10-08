@@ -60,8 +60,6 @@ class OguriCapCog(commands.Cog):
         await ctx.send(embed=embed)
         await asyncio.sleep(3)
 
-
-    @commands.command()
     async def celebrate_victory(self, ctx):
         """Celebrate a victory with Oguri Cap"""
 
@@ -75,7 +73,6 @@ class OguriCapCog(commands.Cog):
             embed.set_image(url=oguri_cap_gif)
 
         await ctx.send(embed=embed)
-
   
 async def setup(bot):
     """Setup function to add OguriCapCog to the bot"""

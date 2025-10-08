@@ -41,7 +41,7 @@ class RoleCog(commands.Cog):
             await ctx.message.add_reaction("❌")
             logging.warning(f"Role '{self.role_name}' not found in guild {ctx.guild.name}")
 
-    async def _remove_done_roles(self, guild: discord.Guild, notify_channel: discord.TextChannel = None) -> int:
+    async def _remove_done_roles(self, guild, notify_channel = None) -> int:
         """
         Helper method to remove 'done' roles from all members.
         
@@ -97,16 +97,26 @@ class RoleCog(commands.Cog):
         else:
             await ctx.message.add_reaction("✅")
 
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        """Start the daily reset task when the bot is ready."""
+        if not self.daily_reset_task.is_running():
+            self.daily_reset_task.start()
+            logging.info("Daily reset task started.")
+        else:
+            logging.info("Daily reset task was already running.")
+        
+    def cog_unload(self) -> None:
+        """Clean up when cog is unloaded."""
+        self.daily_reset_task.cancel()
+        logging.info("Daily reset task cancelled.")
+
     @tasks.loop(time=time(0, 0))
     async def daily_reset_task(self) -> None:
         """
-        Automatically reset 'done' roles at midnight
+        Reset 'done' roles across all guilds at midnight.
         
-        Args:
-            None - runs automatically at midnight daily
-        
-        Note:
-            Requires appropriate permissions to manage roles.
+        This task runs automatically every day at midnight.
         """
         total_removed = 0
         for guild in self.bot.guilds:
@@ -116,6 +126,18 @@ class RoleCog(commands.Cog):
             total_removed += removed
 
         logging.info(f"Daily reset completed! Removed roles from {total_removed} users.")
+
+    @commands.command(aliases=["resetcheck"])
+    @commands.is_owner()
+    async def reset_status(self, ctx) -> None:
+        """Check if daily reset task is running."""
+        if self.daily_reset_task.is_running():
+            next_run = self.daily_reset_task.next_iteration
+            await ctx.message.add_reaction("✅")
+            await ctx.send(f"Daily reset task is running. Next run: {next_run}")
+        else:
+            await ctx.message.add_reaction("❌")
+            await ctx.send("Daily reset task is not running.")
 
     @commands.command()
     @commands.is_owner()

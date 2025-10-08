@@ -1,8 +1,10 @@
 import discord
 from discord.ext import commands
+from typing import Optional
 import logging
 import sqlite3
 import asyncio
+from datetime import datetime, timedelta
 
 class DiscordLogHandler(logging.Handler):
     """Custom logging handler that sends terminal logs to Discord"""
@@ -190,6 +192,40 @@ class DatabaseCog(commands.Cog):
         logging.info(f"Duplicate submission check result: {bool(result)}")
         return bool(result)
 
+    def delete_user_score(self, user_id: int, guild_id: int, date: str) -> bool:
+        """Delete existing score for a user on a specific date in a guild.
+        
+        Args:
+            user_id: Discord user ID
+            guild_id: Discord guild ID
+            date: Date string in YYYY-MM-DD format
+            
+        Returns:
+            True if deletion was successful, False otherwise
+        """
+        try:
+            if not self.connection:
+                logging.error("No database connection.")
+                return False
+                
+            cursor = self.connection.cursor()
+            cursor.execute("""
+                DELETE FROM wordle_scores 
+                WHERE user_id = ? AND guild_id = ? AND date = ?
+            """, (user_id, guild_id, date))
+            
+            deleted_count = cursor.rowcount
+            self.connection.commit()
+            
+            if deleted_count > 0:
+                logging.info(f"Deleted {deleted_count} existing scores for user {user_id} on {date}")
+            
+            return True
+            
+        except Exception as e:
+            logging.error(f"Error deleting user score: {e}")
+            return False
+
     async def log_processor(self) -> None:
         """Background task to process log messages and send them to Discord channel."""
         try:
@@ -315,51 +351,219 @@ class DatabaseCog(commands.Cog):
         
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=["recent", "query_scores"])
     @commands.is_owner()
-    async def enable_terminal_logs(self, ctx: commands.Context, channel: discord.TextChannel = None) -> None:
-        """Enable capturing terminal logs to Discord
-        Args:
-            ctx: The command context.
-            channel: Optional Discord text channel to send logs to. Defaults to current channel.
+    async def recent_scores(self, ctx: commands.Context, limit: int = 10, date: str = None, user = None) -> None:
+        """Show database entries with flexible filtering
         
-        Example:
-            woguri enable_terminal_logs # uses current channel
-            woguri enable_terminal_logs #general # uses #general channel
+        Usage:
+            woguri recent_scores                           # Last 10 entries
+            woguri recent_scores 25                        # Last 25 entries  
+            woguri recent_scores 10 2025-10-06            # 10 entries from specific date
+            woguri recent_scores 10 2025-10-06 @user      # 10 entries from date for user
         """
-        if channel is None:
-            channel = ctx.channel
+        # Validate and cap the limit
+        if limit > 50:
+            limit = 50
+            await ctx.message.add_reaction("⚠️")
+            await ctx.send("Limit capped at 50 entries. You're being a bit greedy, don't you think?")
         
-        self.log_channel_id = channel.id
-        
-        root_logger = logging.getLogger()
-        if self.discord_handler not in root_logger.handlers:
-            root_logger.addHandler(self.discord_handler)
-        
-        await ctx.message.add_reaction("✅")
-        await ctx.send(f"Terminal logs now being sent to {channel.mention}, good job.")
-        logging.info("Terminal logging to Discord enabled")
-
-    @commands.command()
-    @commands.is_owner()
-    async def disable_terminal_logs(self, ctx: commands.Context) -> None:
-        """Disable terminal log capture
-        Args:
-            ctx: The command context.
-
-        Example:
-            woguri disable_terminal_logs
-        """
-        root_logger = logging.getLogger()
         try:
-            root_logger.removeHandler(self.discord_handler)
-        except ValueError:
-            pass  
-        
-        self.log_channel_id = None
-        await ctx.message.add_reaction("❌")
-        await ctx.send("Terminal log capture disabled. Seriously?")
-        logging.info("Terminal logging to Discord disabled")
+            cursor = self.connection.cursor()
+            
+            # Build query based on filters
+            base_query = "SELECT username, score, date, guild_id, user_id FROM wordle_scores"
+            conditions = []
+            params = []
+            
+            # Add date filter if provided
+            if date and date.lower() != "none":
+                try:
+                    # Validate date format
+                    datetime.strptime(date, '%Y-%m-%d')
+                    conditions.append("date = ?")
+                    params.append(date)
+                except ValueError:
+                    await ctx.send("That’s not a valid date. Use YYYY-MM-DD, please. It’s not that hard.")
+                    return
+            
+            # Add user filter if provided
+            if user:
+                conditions.append("user_id = ?")
+                params.append(str(user.id))
+            
+            # Combine conditions
+            if conditions:
+                query = f"{base_query} WHERE {' AND '.join(conditions)}"
+            else:
+                query = base_query
+            
+            # Add ordering and limit
+            query += " ORDER BY date DESC, username LIMIT ?"
+            params.append(limit)
+            
+            logging.info(f"Executing query: {query} with params: {params}")
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            if not results:
+                filter_parts = []
+                if date and date.lower() != "none":
+                    filter_parts.append(f"date {date}")
+                if user:
+                    filter_parts.append(f"user {user.display_name}")
+                
+                filter_text = f" matching {', '.join(filter_parts)}" if filter_parts else ""
+                await ctx.send(f"No results found{filter_text}. Try again if you want.")
+                return
+            
+            # Create formatted output
+            output = "```\n"
+            
+            # Add header with filter info
+            header_parts = [f"Showing {len(results)} entries"]
+            if date and date.lower() != "none":
+                header_parts.append(f"for {date}")
+            if user:
+                header_parts.append(f"for {user.display_name}")
+            
+            output += f"{' '.join(header_parts)}\n"
+            output += "=" * 60 + "\n"
+            output += f"{'Username':<15} {'Score':<5} {'Date':<12} {'Guild':<10}\n"
+            output += "-" * 60 + "\n"
+            
+            for username, score, date_col, guild_id, user_id in results:
+                username_display = username[:14] if username else "Unknown"
+                guild_display = str(guild_id)[:8] if guild_id else "Unknown"
+                
+                output += f"{username_display:<15} {score:<5} {date_col:<12} {guild_display:<10}\n"
+            
+            output += "```"
+            await ctx.send(output)
+                
+        except Exception as e:
+            logging.error(f"Error in recent_scores command: {e}")
+            await ctx.message.add_reaction("❌")
+            await ctx.send("Something went wrong with your request. Probably your input.")
+
+    @commands.command(name="show_duplicates", aliases=["duplicates", "dupes"])
+    @commands.is_owner()
+    async def show_duplicates(self, ctx: commands.Context, guild_id: int = None) -> None:
+        """Show all duplicate submissions in the database."""
+        try:
+            if not self.connection:
+                logging.error("No database connection.")
+                await ctx.message.add_reaction("❌")
+                await ctx.send("Database connection error. Very problematic.")
+                return
+
+            cursor = self.connection.cursor()
+            
+            if guild_id:
+                cursor.execute("""
+                    SELECT user_id, guild_id, date, COUNT(*) as count
+                    FROM wordle_scores 
+                    WHERE guild_id = ?
+                    GROUP BY user_id, guild_id, date 
+                    HAVING COUNT(*) > 1
+                    ORDER BY count DESC, date DESC
+                """, (guild_id,))
+            else:
+                cursor.execute("""
+                    SELECT user_id, guild_id, date, COUNT(*) as count
+                    FROM wordle_scores 
+                    GROUP BY user_id, guild_id, date 
+                    HAVING COUNT(*) > 1
+                    ORDER BY count DESC, date DESC
+                """)
+            
+            duplicates = cursor.fetchall()
+            
+            if not duplicates:
+                await ctx.send("No duplicate entries found. Clean database ✨")
+                return
+            
+            output = "```\nDuplicate Submissions Found:\n"
+            output += "User ID       Guild ID     Date         Count\n"
+            output += "=" * 50 + "\n"
+            
+            for user_id, g_id, date, count in duplicates:
+                output += f"{user_id:<13} {g_id:<12} {date:<12} {count}\n"
+            
+            output += "```"
+            await ctx.send(output)
+            
+        except Exception as e:
+            logging.error(f"Error showing duplicates: {e}")
+            await ctx.message.add_reaction("❌")
+            await ctx.send("Error checking for duplicates. The system must be confused.")
+
+    @commands.command(name="clean_duplicates", aliases=["cleanup", "dedupe"])
+    @commands.is_owner()
+    async def clean_duplicates(self, ctx: commands.Context, guild_id: int = None) -> None:
+        """Remove duplicate submissions, keeping the first occurrence."""
+        try:
+            if not self.connection:
+                logging.error("No database connection.")
+                await ctx.message.add_reaction("❌")
+                await ctx.send("Database connection error. Very problematic.")
+                return
+
+            cursor = self.connection.cursor()
+            
+            # First, show what will be cleaned
+            if guild_id:
+                cursor.execute("""
+                    SELECT user_id, guild_id, date, COUNT(*) as count
+                    FROM wordle_scores 
+                    WHERE guild_id = ?
+                    GROUP BY user_id, guild_id, date 
+                    HAVING COUNT(*) > 1
+                """, (guild_id,))
+            else:
+                cursor.execute("""
+                    SELECT user_id, guild_id, date, COUNT(*) as count
+                    FROM wordle_scores 
+                    GROUP BY user_id, guild_id, date 
+                    HAVING COUNT(*) > 1
+                """)
+            
+            duplicates = cursor.fetchall()
+            
+            if not duplicates:
+                await ctx.send("No duplicates to clean. Database is already pristine ✨")
+                return
+            
+            # Clean duplicates by keeping only the row with the smallest id (first inserted)
+            if guild_id:
+                cursor.execute("""
+                    DELETE FROM wordle_scores 
+                    WHERE id NOT IN (
+                        SELECT MIN(id) 
+                        FROM wordle_scores 
+                        WHERE guild_id = ?
+                        GROUP BY user_id, guild_id, date
+                    ) AND guild_id = ?
+                """, (guild_id, guild_id))
+            else:
+                cursor.execute("""
+                    DELETE FROM wordle_scores 
+                    WHERE id NOT IN (
+                        SELECT MIN(id) 
+                        FROM wordle_scores 
+                        GROUP BY user_id, guild_id, date
+                    )
+                """)
+            
+            deleted_count = cursor.rowcount
+            self.connection.commit()
+            
+            await ctx.send(f"Cleaned up {deleted_count} duplicate entries! Database is now spotless ✨")
+            
+        except Exception as e:
+            logging.error(f"Error cleaning duplicates: {e}")
+            await ctx.message.add_reaction("❌")
+            await ctx.send("Error cleaning duplicates. Something went terribly wrong.")
 
 async def setup(bot: commands.Bot) -> None:
     """Setup function to add the cog to the bot."""
