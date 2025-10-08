@@ -20,17 +20,41 @@ The bot is hosted and maintained, just invite and use.
 
 ## Commands
 
+### Daily Use
+
 - `woguri done` - Get the "done" role after completing your puzzle
 - `woguri leaderboard` - View weekly scores (Sunday 5-11:59 PM only)
 - `woguri snack` - Random Oguri Cap GIF because she's hungry
-- `woguri manual_score 2024-01-15 @user 3` - Add scores manually (owner, admin)
-- `woguri db_stats` - Database statistics (owner only)
-- `woguri db_guilds` - Show all servers using the bot (owner only)
-- `woguri enable_terminal_logs` - Send bot logs to Discord (owner only)
-- `woguri disable_terminal_logs` - Stop Discord logging (owner only)
-- `woguri log_status` - Check logging system status (owner only)
-- `woguri resetlb` - Clear database (owner only)
-- `woguri showlb` - Show leaderboard outside of view window (owner only)
+- `woguri show_all_commands` - List all available commands if you forget
+
+### Score Management (Owner/Admin)
+
+- `woguri manual_score 2024-01-15 @user 3` - Add scores manually
+- `woguri overwrite_score 2024-01-15 @user 4` - Replace existing scores
+- `woguri recent_scores 10` - Show last 10 database entries
+- `woguri recent_scores 25 2024-10-06` - Show entries from specific date
+- `woguri recent_scores 10 2024-10-06 @user` - Filter by user and date
+
+### Database Admin (Owner Only)
+
+- `woguri db_stats` - Database statistics
+- `woguri db_guilds` - Show all servers using the bot
+- `woguri show_duplicates` - Find duplicate submissions
+- `woguri clean_duplicates` - Remove duplicates (keeps first entry)
+- `woguri resetlb` - Clear database (dangerous!)
+- `woguri showlb` - Show leaderboard outside of view window
+
+### Role Management (Owner Only)
+
+- `woguri reset` - Remove "done" role from everyone manually
+- `woguri resetcheck` - Check if daily role reset is working
+- `woguri test_daily_reset` - Test the midnight reset functionality
+
+### Logging System (Owner Only)
+
+- `woguri enable_terminal_logs` - Send bot logs to Discord
+- `woguri disable_terminal_logs` - Stop Discord logging
+- `woguri log_status` - Check logging system status
 
 Works with both `woguri` and `Woguri` prefixes. Invalid commands get Oguri Cap responses.
 
