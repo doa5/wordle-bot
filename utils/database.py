@@ -457,6 +457,156 @@ class DatabaseCog(commands.Cog):
             await ctx.add_reaction("❌")
             await ctx.send("Something went wrong with your request. Probably your input.")
 
+    @commands.command(name="show_duplicates", aliases=["duplicates", "dupes"])
+    @commands.is_owner()
+    async def show_duplicates(self, ctx, guild_id: int = None):
+        """Show all duplicate submissions in the database."""
+        try:
+            if not self.connection:
+                logging.error("No database connection.")
+                await ctx.add_reaction("❌")
+                await ctx.send("Database connection error. Very problematic.")
+                return
+
+            cursor = self.connection.cursor()
+            
+            if guild_id:
+                cursor.execute("""
+                    SELECT user_id, guild_id, date, COUNT(*) as count
+                    FROM wordle_scores 
+                    WHERE guild_id = ?
+                    GROUP BY user_id, guild_id, date 
+                    HAVING COUNT(*) > 1
+                    ORDER BY count DESC, date DESC
+                """, (guild_id,))
+            else:
+                cursor.execute("""
+                    SELECT user_id, guild_id, date, COUNT(*) as count
+                    FROM wordle_scores 
+                    GROUP BY user_id, guild_id, date 
+                    HAVING COUNT(*) > 1
+                    ORDER BY count DESC, date DESC
+                """)
+            
+            duplicates = cursor.fetchall()
+            
+            if not duplicates:
+                await ctx.send("No duplicate entries found. Clean database ✨")
+                return
+            
+            output = "```\nDuplicate Submissions Found:\n"
+            output += "User ID       Guild ID     Date         Count\n"
+            output += "=" * 50 + "\n"
+            
+            for user_id, g_id, date, count in duplicates:
+                output += f"{user_id:<13} {g_id:<12} {date:<12} {count}\n"
+            
+            output += "```"
+            await ctx.send(output)
+            
+        except Exception as e:
+            logging.error(f"Error showing duplicates: {e}")
+            await ctx.add_reaction("❌")
+            await ctx.send("Error checking for duplicates. The system must be confused.")
+
+    @commands.command(name="clean_duplicates", aliases=["cleanup", "dedupe"])
+    @commands.is_owner()
+    async def clean_duplicates(self, ctx, guild_id: int = None):
+        """Remove duplicate submissions, keeping the first occurrence."""
+        try:
+            if not self.connection:
+                logging.error("No database connection.")
+                await ctx.add_reaction("❌")
+                await ctx.send("Database connection error. Very problematic.")
+                return
+
+            cursor = self.connection.cursor()
+            
+            # First, show what will be cleaned
+            if guild_id:
+                cursor.execute("""
+                    SELECT user_id, guild_id, date, COUNT(*) as count
+                    FROM wordle_scores 
+                    WHERE guild_id = ?
+                    GROUP BY user_id, guild_id, date 
+                    HAVING COUNT(*) > 1
+                """, (guild_id,))
+            else:
+                cursor.execute("""
+                    SELECT user_id, guild_id, date, COUNT(*) as count
+                    FROM wordle_scores 
+                    GROUP BY user_id, guild_id, date 
+                    HAVING COUNT(*) > 1
+                """)
+            
+            duplicates = cursor.fetchall()
+            
+            if not duplicates:
+                await ctx.send("No duplicates to clean. Database is already pristine ✨")
+                return
+            
+            # Clean duplicates by keeping only the row with the smallest id (first inserted)
+            if guild_id:
+                cursor.execute("""
+                    DELETE FROM wordle_scores 
+                    WHERE id NOT IN (
+                        SELECT MIN(id) 
+                        FROM wordle_scores 
+                        WHERE guild_id = ?
+                        GROUP BY user_id, guild_id, date
+                    ) AND guild_id = ?
+                """, (guild_id, guild_id))
+            else:
+                cursor.execute("""
+                    DELETE FROM wordle_scores 
+                    WHERE id NOT IN (
+                        SELECT MIN(id) 
+                        FROM wordle_scores 
+                        GROUP BY user_id, guild_id, date
+                    )
+                """)
+            
+            deleted_count = cursor.rowcount
+            self.connection.commit()
+            
+            await ctx.send(f"Cleaned up {deleted_count} duplicate entries! Database is now spotless ✨")
+            
+        except Exception as e:
+            logging.error(f"Error cleaning duplicates: {e}")
+            await ctx.add_reaction("❌")
+            await ctx.send("Error cleaning duplicates. Something went terribly wrong.")
+
+    def has_duplicate_submission(self, user_id: int, guild_id: int, date: str) -> bool:
+        """Check if a user already has a submission for the given date in the guild.
+        
+        Args:
+            user_id: Discord user ID
+            guild_id: Discord guild ID  
+            date: Date string in YYYY-MM-DD format
+            
+        Returns:
+            True if duplicate exists, False otherwise
+        """
+        try:
+            if not self.connection:
+                logging.error("No database connection.")
+                return False  # On error, allow submission rather than block it
+                
+            cursor = self.connection.cursor()
+            
+            cursor.execute("""
+                SELECT COUNT(*) FROM wordle_scores 
+                WHERE user_id = ? AND guild_id = ? AND date = ?
+            """, (user_id, guild_id, date))
+            
+            count = cursor.fetchone()[0]
+            
+            return count > 0
+            
+        except Exception as e:
+            logging.error(f"Error checking for duplicate submission: {e}")
+            return False  # On error, allow submission rather than block it
+
 async def setup(bot: commands.Bot) -> None:
     """Setup function to add the cog to the bot."""
     await bot.add_cog(DatabaseCog(bot))
