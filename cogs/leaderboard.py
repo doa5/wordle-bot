@@ -249,7 +249,7 @@ class LeaderboardCog(commands.Cog):
             woguri enable_everyone_ping
         """
         self.ping_everyone_enabled[ctx.guild.id] = True
-        await ctx.add_reaction("✅")
+        await ctx.message.add_reaction("✅")
         await ctx.send("@everyone ping enabled for weekly leaderboards.")
         logging.info(f"@everyone ping enabled for guild {ctx.guild.id}")
 
@@ -266,7 +266,7 @@ class LeaderboardCog(commands.Cog):
             woguri disable_everyone_ping
         """
         self.ping_everyone_enabled[ctx.guild.id] = False
-        await ctx.add_reaction("✅")
+        await ctx.message.add_reaction("✅")
         await ctx.send("@everyone ping disabled for weekly leaderboards.")
         logging.info(f"@everyone ping disabled for guild {ctx.guild.id}")
 
@@ -284,7 +284,7 @@ class LeaderboardCog(commands.Cog):
         enabled = self.ping_everyone_enabled.get(ctx.guild.id, True)  # Default to True
         status = "enabled" if enabled else "disabled"
         emoji = "✅" if enabled else "❌"
-        await ctx.add_reaction(emoji)
+        await ctx.message.add_reaction(emoji)
         await ctx.send(f"@everyone ping for leaderboards is currently {status}.")
         logging.info(f"Ping status checked for guild {ctx.guild.id}: {status}")
 
