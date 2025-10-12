@@ -8,6 +8,8 @@ class LeaderboardCog(commands.Cog):
     """
     def __init__(self, bot) -> None:
         self.bot = bot
+        # Dictionary to store ping settings per guild
+        self.ping_everyone_enabled = {}
 
     def is_leaderboard_available(self) -> bool:
         """
@@ -101,8 +103,9 @@ class LeaderboardCog(commands.Cog):
             logging.info(f"No scores found for guild {ctx.guild.id} this week.")
             return
         
-        # Format leaderboard
-        leaderboard = "@everyone\n\n**Weekly Wordle Leaderboard**\n"
+        # Format leaderboard with optional @everyone ping
+        ping = "@everyone\n\n" if self.ping_everyone_enabled.get(ctx.guild.id, True) else ""
+        leaderboard = f"{ping}**Weekly Wordle Leaderboard**\n"
         leaderboard += f"*Week of {week_start.strftime('%B %d')} - {week_end.strftime('%B %d')}*\n\n"
 
         # Track positions for tie handling
@@ -232,6 +235,58 @@ class LeaderboardCog(commands.Cog):
 
         """
         await self.produce_leaderboard(ctx)
+
+    @commands.command(aliases=["enableping", "pingtoggle"])
+    @commands.has_permissions(manage_guild=True)
+    async def enable_everyone_ping(self, ctx: commands.Context) -> None:
+        """
+        Enable @everyone ping for weekly leaderboards.
+        
+        Args:
+            ctx: The command context.
+            
+        Example:
+            woguri enable_everyone_ping
+        """
+        self.ping_everyone_enabled[ctx.guild.id] = True
+        await ctx.add_reaction("✅")
+        await ctx.send("@everyone ping enabled for weekly leaderboards.")
+        logging.info(f"@everyone ping enabled for guild {ctx.guild.id}")
+
+    @commands.command(aliases=["disableping", "nopping"])
+    @commands.has_permissions(manage_guild=True)
+    async def disable_everyone_ping(self, ctx: commands.Context) -> None:
+        """
+        Disable @everyone ping for weekly leaderboards.
+        
+        Args:
+            ctx: The command context.
+            
+        Example:
+            woguri disable_everyone_ping
+        """
+        self.ping_everyone_enabled[ctx.guild.id] = False
+        await ctx.add_reaction("✅")
+        await ctx.send("@everyone ping disabled for weekly leaderboards.")
+        logging.info(f"@everyone ping disabled for guild {ctx.guild.id}")
+
+    @commands.command(aliases=["pingstatus"])
+    async def ping_status(self, ctx: commands.Context) -> None:
+        """
+        Check current @everyone ping setting for leaderboards.
+        
+        Args:
+            ctx: The command context.
+            
+        Example:
+            woguri ping_status
+        """
+        enabled = self.ping_everyone_enabled.get(ctx.guild.id, True)  # Default to True
+        status = "enabled" if enabled else "disabled"
+        emoji = "✅" if enabled else "❌"
+        await ctx.add_reaction(emoji)
+        await ctx.send(f"@everyone ping for leaderboards is currently {status}.")
+        logging.info(f"Ping status checked for guild {ctx.guild.id}: {status}")
 
 async def setup(bot: commands.Bot) -> None:
     """Setup function to add the cog to the bot."""
