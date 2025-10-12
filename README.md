@@ -1,4 +1,4 @@
-# Wordle Bot ( ◡̀_◡́)ᕤ
+# Wordle Bot
 
 Discord bot that tracks Wordle scores with an Oguri Cap personality. Automatically parses results and maintains weekly leaderboards.
 
