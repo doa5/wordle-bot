@@ -102,18 +102,29 @@ class LeaderboardCog(commands.Cog):
             return
         
         # Format leaderboard
-        leaderboard = "**Weekly Wordle Leaderboard**\n"
+        leaderboard = "@everyone\n\n**Weekly Wordle Leaderboard**\n"
         leaderboard += f"*Week of {week_start.strftime('%B %d')} - {week_end.strftime('%B %d')}*\n\n"
 
-        for i, (username, total_score, games) in enumerate(results, 1):
-            if i == 1:
+        # Track positions for tie handling
+        current_position = 1
+        previous_score = None
+        
+        for i, (username, total_score, games) in enumerate(results):
+            # Update position only when score changes (handles ties)
+            if previous_score is not None and total_score != previous_score:
+                current_position = i + 1
+            
+            # Assign medals based on current position
+            if current_position == 1:
                 leaderboard += f"👑 **{username}**: {total_score} points\n"
-            elif i == 2:
+            elif current_position == 2:
                 leaderboard += f"🥈 **{username}**: {total_score} points\n"
-            elif i == 3:
+            elif current_position == 3:
                 leaderboard += f"🥉 **{username}**: {total_score} points\n"
             else:
-                leaderboard += f"{i}. **{username}**: {total_score} points\n"
+                leaderboard += f"{current_position}. **{username}**: {total_score} points\n"
+            
+            previous_score = total_score
 
         await ctx.send(leaderboard)
         
